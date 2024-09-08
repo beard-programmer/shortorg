@@ -1,0 +1,16 @@
+{
+  "development": {
+    "user": "identity",
+    "password": "identity",
+    "host": "localhost",
+    "dbname": "identity",
+    "port": 5434
+  },
+  "test": {
+    "user": "identity",
+    "password": "identity",
+    "host": "localhost",
+    "dbname": "identity",
+    "port": 5435
+  }
+}

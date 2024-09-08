@@ -1,0 +1,16 @@
+{
+  "development": {
+    "user": "shortorg",
+    "password": "shortorg",
+    "host": "localhost",
+    "dbname": "shortorg",
+    "port": 5432
+  },
+  "test": {
+    "user": "shortorg",
+    "password": "shortorg",
+    "host": "localhost",
+    "dbname": "shortorg",
+    "port": 5433
+  }
+}

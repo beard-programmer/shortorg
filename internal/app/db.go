@@ -23,7 +23,7 @@ func ConnectDb(configFile, environment string, driver string, maxConnections int
 		return nil, err
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s application_name=backend sslmode=disable",
 		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName)
 
 	db, err := sqlx.Connect(driver, connStr)
@@ -32,6 +32,7 @@ func ConnectDb(configFile, environment string, driver string, maxConnections int
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)
 	}
 	db.SetMaxOpenConns(maxConnections)
+	db.SetMaxIdleConns(maxConnections)
 
 	logger.Info("Successfully connected to database.")
 

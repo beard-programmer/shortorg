@@ -6,7 +6,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/beard-programmer/shortorg/internal/app"
@@ -21,29 +20,26 @@ type App struct {
 	IdentifierProvider encode.IdentifierProvider
 	ParseUrl           func(s string) (encode.URL, error)
 	Logger             *zap.SugaredLogger
-	Server             *http.Server
 	Worker             *encode.UrlSaveWorker
 }
 
 func (a *App) New() *App {
 	environment := getEnvWithDefault("GO_ENV", "development")
-	concurrency := runtime.GOMAXPROCS(0)
 
 	a.Logger = app.InitZapLogger()
 	a.Logger.Infow("Initializing app",
 		"environment", environment,
-		"concurrency", concurrency,
 	)
 
 	driver := app.RegisterSqlLogger(a.Logger)
-	identityDB, err := app.ConnectDb("identity_db.json", environment, driver, concurrency, a.Logger)
+	identityDB, err := app.ConnectDb("identity_db.json", environment, driver, 50, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
 	}
 
 	a.IdentifierProvider = &infrastructure.PostgresIdentifierProvider{DB: identityDB}
 
-	mainDB, err := app.ConnectDb("db.json", environment, driver, 1, a.Logger)
+	mainDB, err := app.ConnectDb("db.json", environment, driver, 10, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
 	}
@@ -67,19 +63,19 @@ func (a *App) StartServer(ctx context.Context) error {
 
 	loggedMux := app.LoggingMiddleware(a.Logger, mux)
 
-	a.Server = &http.Server{
+	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      loggedMux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 20 * time.Second,
-		IdleTimeout:  30 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	serverErrChan := make(chan error, 1)
 
 	go func() {
 		a.Logger.Info("Starting server on :8080...")
-		if err := a.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrChan <- err
 		}
 		close(serverErrChan)
@@ -94,7 +90,7 @@ func (a *App) StartServer(ctx context.Context) error {
 			cancel()
 		}()
 
-		if err := a.Server.Shutdown(ctxShutDown); err != nil {
+		if err := server.Shutdown(ctxShutDown); err != nil {
 			a.Logger.Errorf("Server shutdown failed: %v", err)
 			return err
 		}

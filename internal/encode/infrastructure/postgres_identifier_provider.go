@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/beard-programmer/shortorg/internal/common"
 	"github.com/jmoiron/sqlx"
@@ -22,9 +21,6 @@ type PostgresIdentifierProvider struct {
 }
 
 func (p *PostgresIdentifierProvider) ProduceTokenIdentifier(ctx context.Context) (*common.IntegerBase58Exp5To6, error) {
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
-	defer cancel()
-
 	var uniqueID int64
 	query := "SELECT nextval('token_identifier')"
 

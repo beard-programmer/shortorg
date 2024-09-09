@@ -36,15 +36,14 @@ func (w *UrlSaveWorker) Stop() {
 func (w *UrlSaveWorker) Start(ctx context.Context) {
 	go func() {
 		var batch []EncodedUrl
-		batchTicker := time.NewTicker(1 * time.Second) // Ticker for periodic batch processing
-		defer batchTicker.Stop()                       // Stop the ticker when the goroutine exits
+		batchTicker := time.NewTicker(1 * time.Second)
+		defer batchTicker.Stop()
 
-		batchLimit := 10 // Define your batch limit
+		batchLimit := 100
 
 		for {
 			select {
 			case <-ctx.Done():
-				// When context is canceled, process the remaining batch (if any) before exiting
 				if len(batch) > 0 {
 					w.logger.Info("Context canceled, processing remaining batch before shutdown")
 					w.processBatch(ctx, batch)
@@ -53,20 +52,17 @@ func (w *UrlSaveWorker) Start(ctx context.Context) {
 				return
 
 			case event := <-w.eventChan:
-				// Add new events to the batch
 				batch = append(batch, EncodedUrl{event.URL, &event.Token.TokenIdentifier})
 
-				// If the batch limit is reached, process the batch
 				if len(batch) >= batchLimit {
 					w.processBatch(ctx, batch)
-					batch = nil // Reset batch after processing
+					batch = nil
 				}
 
 			case <-batchTicker.C:
-				// Periodically process the batch even if the batch limit is not reached
 				if len(batch) > 0 {
 					w.processBatch(ctx, batch)
-					batch = nil // Reset batch after processing
+					batch = nil
 				}
 			}
 		}
@@ -74,7 +70,7 @@ func (w *UrlSaveWorker) Start(ctx context.Context) {
 }
 
 func (w *UrlSaveWorker) processBatch(ctx context.Context, batch []EncodedUrl) {
-	batchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	batchCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	err := w.provider.SaveEncodedURL(batchCtx, batch)

@@ -21,7 +21,7 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-func ApiHandler(identityProvider IdentityProvider, parseUrl func(string) (URL, error), logger *zap.SugaredLogger, encodedUrlChan chan<- UrlWasEncoded) http.HandlerFunc {
+func ApiHandler(identityProvider IdentifierProvider, parseUrl func(string) (URL, error), logger *zap.SugaredLogger, encodedUrlChan chan<- UrlWasEncoded) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req APIRequest
 		err := json.NewDecoder(r.Body).Decode(&req)

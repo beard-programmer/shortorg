@@ -14,58 +14,55 @@ import (
 	"github.com/beard-programmer/shortorg/internal/encode/infrastructure"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 type App struct {
-	DB         *sqlx.DB
-	IdentityDB *sqlx.DB
-	Logger     *zap.SugaredLogger
-	Server     *http.Server
-	Worker     *encode.UrlSaveWorker
+	IdentifierProvider encode.IdentifierProvider
+	ParseUrl           func(s string) (encode.URL, error)
+	Logger             *zap.SugaredLogger
+	Server             *http.Server
+	Worker             *encode.UrlSaveWorker
 }
 
 func (a *App) New() *App {
 	environment := getEnvWithDefault("GO_ENV", "development")
-	numCores := runtime.GOMAXPROCS(0)
+	concurrency := runtime.GOMAXPROCS(0)
 
 	a.Logger = app.InitZapLogger()
 	a.Logger.Infow("Initializing app",
 		"environment", environment,
-		"numCores", numCores,
+		"concurrency", concurrency,
 	)
 
 	driver := app.RegisterSqlLogger(a.Logger)
+	identityDB, err := app.ConnectDb("identity_db.json", environment, driver, concurrency, a.Logger)
+	if err != nil {
+		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
+	}
+
+	a.IdentifierProvider = &infrastructure.PostgresIdentifierProvider{DB: identityDB}
 
 	mainDB, err := app.ConnectDb("db.json", environment, driver, 1, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
 	}
-	a.DB = mainDB
+	a.Worker = new(encode.UrlSaveWorker).New(&infrastructure.SaveEncodedUrlProvider{DB: mainDB}, a.Logger)
 
-	identityDB, err := app.ConnectDb("identity_db.json", environment, driver, 1, a.Logger)
-	if err != nil {
-		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
+	a.ParseUrl = func(s string) (encode.URL, error) {
+		return infrastructure.ParseURLString(s)
 	}
-	a.IdentityDB = identityDB
-
-	// Setup HTTP server with routes
-	a.setupServer()
 
 	return a
 }
 
-func (a *App) setupServer() {
+func (a *App) StartServer(ctx context.Context) error {
+	a.Worker.Start(ctx)
+
 	mux := http.NewServeMux()
 
-	a.Worker = new(encode.UrlSaveWorker).New(&infrastructure.SaveEncodedUrlProvider{DB: a.DB}, a.Logger)
-
-	parseUrl := func(s string) (encode.URL, error) {
-		return infrastructure.ParseURLString(s)
-	}
 	mux.HandleFunc(
-		"/encode", encode.ApiHandler(&infrastructure.PostgresIdentifierProvider{DB: a.IdentityDB}, parseUrl, a.Logger, a.Worker.GetEventChan()))
+		"/encode", encode.ApiHandler(a.IdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
 	mux.HandleFunc("/debug/pprof/", http.DefaultServeMux.ServeHTTP)
 
 	loggedMux := app.LoggingMiddleware(a.Logger, mux)
@@ -73,16 +70,12 @@ func (a *App) setupServer() {
 	a.Server = &http.Server{
 		Addr:         ":8080",
 		Handler:      loggedMux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 60 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  30 * time.Second,
 	}
-}
 
-func (a *App) StartServer(ctx context.Context) error {
 	serverErrChan := make(chan error, 1)
-
-	a.Worker.Start(ctx)
 
 	go func() {
 		a.Logger.Info("Starting server on :8080...")
@@ -95,13 +88,17 @@ func (a *App) StartServer(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		a.Logger.Info("Context canceled, shutting down server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
-		if err := a.Server.Shutdown(shutdownCtx); err != nil {
+		ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer func() {
+			cancel()
+		}()
+
+		if err := a.Server.Shutdown(ctxShutDown); err != nil {
 			a.Logger.Errorf("Server shutdown failed: %v", err)
 			return err
 		}
+
 		a.Logger.Info("Server successfully shutdown")
 		return nil
 	case err := <-serverErrChan:

@@ -18,7 +18,7 @@ type Request struct {
 	EncodeAtHost *string
 }
 
-type IdentityProvider interface {
+type IdentifierProvider interface {
 	ProduceTokenIdentifier(ctx context.Context) (*TokenIdentifier, error)
 }
 
@@ -29,7 +29,7 @@ type EncodedUrl struct {
 
 func Encode(
 	ctx context.Context,
-	identityProvider IdentityProvider,
+	identityProvider IdentifierProvider,
 	parseUrl func(string) (URL, error),
 	logger *zap.SugaredLogger,
 	request Request,

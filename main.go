@@ -31,7 +31,7 @@ func main() {
 
 	<-ctx.Done()
 
-	gracefulShutdownTimeout := 5 * time.Second
+	gracefulShutdownTimeout := 2 * time.Second
 	log.Printf("Waiting %v for graceful shutdown...", gracefulShutdownTimeout)
 	time.Sleep(gracefulShutdownTimeout)
 	log.Println("Shutdown complete.")

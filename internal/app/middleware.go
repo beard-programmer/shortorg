@@ -15,7 +15,7 @@ func LoggingMiddleware(logger *zap.SugaredLogger, next http.Handler) http.Handle
 		next.ServeHTTP(wrappedWriter, r)
 
 		duration := time.Since(start)
-		if duration > 1000*time.Millisecond {
+		if 100*time.Millisecond < duration {
 			logger.Warnf("%s - - [%s] \"%s %s %s\" %d %d \"%s\" %.3fms",
 				r.RemoteAddr,
 				time.Now().Format("02/Jan/2006:15:04:05 -0700"),

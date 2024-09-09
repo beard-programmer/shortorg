@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/beard-programmer/shortorg/internal/encode/infrastructure"
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
@@ -23,13 +21,7 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-// LoggingDB wraps sqlx.DB to log all queries with Zap
-type LoggingDB struct {
-	*sqlx.DB
-	Logger *zap.SugaredLogger
-}
-
-func ApiHandler(IdentityDB *sqlx.DB) http.HandlerFunc {
+func ApiHandler(identityProvider IdentityProvider, parseUrl func(string) (URL, error), logger *zap.SugaredLogger, encodedUrlChan chan<- UrlWasEncoded) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req APIRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -38,14 +30,12 @@ func ApiHandler(IdentityDB *sqlx.DB) http.HandlerFunc {
 			return
 		}
 
-		identityProvider := infrastructure.PostgresIdentifierProvider{DB: IdentityDB}
-		urlWasEncoded, err := Encode(&identityProvider, Request{
+		urlWasEncoded, err := Encode(r.Context(), identityProvider, parseUrl, logger, Request{
 			URL:          req.URL,
 			EncodeAtHost: req.EncodeAtHost,
 		})
 
 		if err != nil {
-			// Respond with an error in JSON format
 			w.WriteHeader(http.StatusInternalServerError)
 			err := json.NewEncoder(w).Encode(ErrorResponse{Message: err.Error()})
 			if err != nil {
@@ -54,12 +44,13 @@ func ApiHandler(IdentityDB *sqlx.DB) http.HandlerFunc {
 			return
 		}
 
-		// Respond with the encoded URL in JSON format
+		encodedUrlChan <- *urlWasEncoded
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(w).Encode(APIResponse{
 			URL:      urlWasEncoded.URL,
-			ShortURL: "https://" + urlWasEncoded.ShortHost + "/" + urlWasEncoded.ShortToken,
+			ShortURL: "https://" + urlWasEncoded.Token.TokenHost.Host() + "/" + urlWasEncoded.Token.TokenEncoded.Value(),
 		})
 		if err != nil {
 			panic(err)

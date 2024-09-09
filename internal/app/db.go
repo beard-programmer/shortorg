@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func ConnectDb(configFile, environment string, driver string, logger *zap.SugaredLogger) (*sqlx.DB, error) {
+func ConnectDb(configFile, environment string, driver string, maxConnections int, logger *zap.SugaredLogger) (*sqlx.DB, error) {
 	dbConfig, err := NewConfig(configFile, environment)
 	if err != nil {
 		return nil, err
@@ -31,12 +31,17 @@ func ConnectDb(configFile, environment string, driver string, logger *zap.Sugare
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)
 	}
-	db.SetMaxOpenConns(100)
+	db.SetMaxOpenConns(maxConnections)
 
 	logger.Info("Successfully connected to database.")
 
-	// Run migrations
-	err = RunMigrations(db.DB, dbConfig.MigrationsPath, logger)
+	migrationDB, err := sqlx.Open(driver, connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open connection for migrations: %w", err)
+	}
+	defer migrationDB.Close()
+
+	err = RunMigrations(migrationDB.DB, dbConfig.MigrationsPath, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
@@ -97,6 +102,7 @@ func NewConfig(fileName, env string) (*DBConfig, error) {
 }
 
 func RegisterSqlLogger(logger *zap.SugaredLogger) string {
+	logger.Infow("Registering pg-hook")
 	hook := &Hooks{Logger: logger}
 	sql.Register("pg-hooks", sqlhooks.Wrap(&pq.Driver{}, hook))
 	return "pg-hooks"
@@ -113,6 +119,10 @@ func (h *Hooks) Before(ctx context.Context, query string, args ...interface{}) (
 	startTime := time.Now()
 
 	ctx = context.WithValue(ctx, ctxKeyStartTime{}, startTime)
+	//h.Logger.Warnf("Query started",
+	//	"query", query,
+	//	"args", args, // Duration in seconds
+	//)
 
 	return ctx, nil
 }
@@ -127,7 +137,7 @@ func (h *Hooks) After(ctx context.Context, query string, args ...interface{}) (c
 
 	duration := time.Since(startTime)
 
-	if 100*time.Millisecond < duration {
+	if 10*time.Millisecond < duration {
 		h.Logger.Warnf("Query completed",
 			"query", query,
 			"args", args,

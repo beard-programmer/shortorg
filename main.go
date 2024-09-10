@@ -20,10 +20,10 @@ func main() {
 	go func() {
 		<-sigChan
 		log.Println("Received shutdown signal, shutting down gracefully...")
-		cancel() // Cancel the context to trigger shutdown
+		cancel()
 	}()
 
-	app := new(internal.App).New()
+	app := new(internal.App).New(ctx)
 
 	if err := app.StartServer(ctx); err != nil {
 		log.Fatalf("Server failed to start: %v", err)

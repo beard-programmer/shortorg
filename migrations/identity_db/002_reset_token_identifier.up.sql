@@ -1,0 +1,3 @@
+ALTER SEQUENCE token_identifier
+    INCREMENT BY 2
+        RESTART WITH 684776251;

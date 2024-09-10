@@ -17,13 +17,14 @@ import (
 )
 
 type App struct {
-	IdentifierProvider encode.IdentifierProvider
-	ParseUrl           func(s string) (encode.URL, error)
-	Logger             *zap.SugaredLogger
-	Worker             *encode.UrlSaveWorker
+	IdentifierProvider      encode.IdentifierProvider
+	RedisIdentifierProvider encode.IdentifierProvider
+	ParseUrl                func(s string) (encode.URL, error)
+	Logger                  *zap.SugaredLogger
+	Worker                  *encode.UrlSaveWorker
 }
 
-func (a *App) New() *App {
+func (a *App) New(ctx context.Context) *App {
 	environment := getEnvWithDefault("GO_ENV", "development")
 
 	a.Logger = app.InitZapLogger()
@@ -37,6 +38,12 @@ func (a *App) New() *App {
 		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
 	}
 
+	redis, err := app.ConnectToRedis(ctx, a.Logger, environment)
+	if err != nil {
+		a.Logger.Fatalf("Failed to connect to redis: %v", err)
+	}
+
+	a.RedisIdentifierProvider = &infrastructure.RedisIdentifierProvider{Redis: redis}
 	a.IdentifierProvider = &infrastructure.PostgresIdentifierProvider{DB: identityDB}
 
 	mainDB, err := app.ConnectDb("db.json", environment, driver, 10, a.Logger)
@@ -53,12 +60,15 @@ func (a *App) New() *App {
 }
 
 func (a *App) StartServer(ctx context.Context) error {
-	a.Worker.Start(ctx)
+	workerErrChan := make(chan error)
+	a.Worker.Start(ctx, workerErrChan)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc(
-		"/encode", encode.ApiHandler(a.IdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
+		"/encode", encode.ApiHandler(a.RedisIdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
+	mux.HandleFunc(
+		"/encode2", encode.ApiHandler(a.IdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
 	mux.HandleFunc("/debug/pprof/", http.DefaultServeMux.ServeHTTP)
 
 	loggedMux := app.LoggingMiddleware(a.Logger, mux)
@@ -103,7 +113,11 @@ func (a *App) StartServer(ctx context.Context) error {
 			return err
 		}
 		return nil
+	case err := <-workerErrChan:
+		a.Logger.Errorf("Worker returned error, cant proceed: %v", err)
+		return err
 	}
+
 }
 
 func getEnvWithDefault(key, defaultValue string) string {

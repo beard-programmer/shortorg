@@ -51,8 +51,20 @@ services:
       - identity_db_test:/var/lib/postgresql/data
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf  # Mount redis.conf from config
+      - redis_data:/data
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]  # Use custom redis.conf
+    restart: always
 volumes:
   db_data:
   db_test_data:
   identity_db:
   identity_db_test:
+  redis_data:
+    driver: local

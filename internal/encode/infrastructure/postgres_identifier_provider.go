@@ -2,18 +2,19 @@ package infrastructure
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/beard-programmer/shortorg/internal/common"
 	"github.com/jmoiron/sqlx"
 )
 
-type TokenSystemError struct {
+type PostgresIdentityProviderError struct {
 	Err error
 }
 
-func (e TokenSystemError) Error() string {
-	return fmt.Sprintf("Token system error: %v", e.Err)
+func (e PostgresIdentityProviderError) Error() string {
+	return fmt.Sprintf("PostgresIdentityProviderError error: %v", e.Err)
 }
 
 type PostgresIdentifierProvider struct {
@@ -26,7 +27,10 @@ func (p *PostgresIdentifierProvider) ProduceTokenIdentifier(ctx context.Context)
 
 	err := p.DB.GetContext(ctx, &uniqueID, query)
 	if err != nil {
-		return nil, TokenSystemError{Err: err}
+		if errors.Is(err, context.Canceled) {
+			return nil, err
+		}
+		return nil, PostgresIdentityProviderError{Err: err}
 	}
 
 	return new(common.IntegerBase58Exp5To6).FromInt(uniqueID)

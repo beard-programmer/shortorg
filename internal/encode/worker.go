@@ -33,7 +33,7 @@ func (w *UrlSaveWorker) Stop() {
 	close(w.eventChan)
 }
 
-func (w *UrlSaveWorker) Start(ctx context.Context) {
+func (w *UrlSaveWorker) Start(ctx context.Context, errChan chan<- error) {
 	go func() {
 		var batch []EncodedUrl
 		batchTicker := time.NewTicker(1 * time.Second)
@@ -46,7 +46,7 @@ func (w *UrlSaveWorker) Start(ctx context.Context) {
 			case <-ctx.Done():
 				if len(batch) > 0 {
 					w.logger.Info("Context canceled, processing remaining batch before shutdown")
-					w.processBatch(ctx, batch)
+					w.processBatch(ctx, batch, errChan)
 				}
 				w.logger.Info("Worker shut down gracefully")
 				return
@@ -55,13 +55,13 @@ func (w *UrlSaveWorker) Start(ctx context.Context) {
 				batch = append(batch, EncodedUrl{event.URL, &event.Token.TokenIdentifier})
 
 				if len(batch) >= batchLimit {
-					w.processBatch(ctx, batch)
+					w.processBatch(ctx, batch, errChan)
 					batch = nil
 				}
 
 			case <-batchTicker.C:
 				if len(batch) > 0 {
-					w.processBatch(ctx, batch)
+					w.processBatch(ctx, batch, errChan)
 					batch = nil
 				}
 			}
@@ -69,12 +69,13 @@ func (w *UrlSaveWorker) Start(ctx context.Context) {
 	}()
 }
 
-func (w *UrlSaveWorker) processBatch(ctx context.Context, batch []EncodedUrl) {
+func (w *UrlSaveWorker) processBatch(ctx context.Context, batch []EncodedUrl, errChan chan<- error) {
 	batchCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	err := w.provider.SaveEncodedURL(batchCtx, batch)
 	if err != nil {
 		w.logger.Errorf("Failed to save encoded URL: %v", err)
+		errChan <- err
 	}
 }

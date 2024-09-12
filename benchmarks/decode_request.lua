@@ -16,18 +16,15 @@ end
 -- Load the short URLs from the file
 loadShortUrlsFromFile("short_urls.txt")
 
--- Index for keeping track of the current short URL
-local current_index = 1
+math.randomseed(os.time())
+
 
 -- HTTP request function to be called for each request
 request = function()
-    if current_index > #short_urls then
-        current_index = 1 -- Reset the index if we reach the end of the list
-    end
 
-    -- Use the short URL from the list
-    local short_url = short_urls[current_index]
-    current_index = current_index + 1
+
+    local random_index = math.random(1, #short_urls)
+    local short_url = short_urls[random_index]
 
     -- Create the HTTP request body
     local body = '{"short_url": "' .. short_url .. '"}'

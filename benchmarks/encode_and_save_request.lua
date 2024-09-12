@@ -18,7 +18,7 @@ local function randomString(length)
 end
 
 -- Open file for appending short URLs
-local file = io.open("short_urls.txt", "a")
+local file = io.open("short_urls_out.txt", "a")
 
 -- Function to log short URL to file
 local function logShortUrl(short_url)

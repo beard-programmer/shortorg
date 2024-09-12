@@ -14,16 +14,18 @@ func LoggingMiddleware(logger *zap.SugaredLogger, next http.Handler) http.Handle
 		wrappedWriter := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(wrappedWriter, r)
 
-		duration := time.Since(start)
-		logger.Infof("%s - - \"%s %s %s\" %d  \"%s\" %.3fms",
-			r.RemoteAddr,
-			r.Method,
-			r.URL.String(),
-			r.Proto,
-			wrappedWriter.statusCode,
-			r.UserAgent(),
-			duration.Seconds()*1000,
-		)
+		if 500 <= wrappedWriter.statusCode {
+			duration := time.Since(start)
+			logger.Infof("%s - - \"%s %s %s\" %d  \"%s\" %.3fms",
+				r.RemoteAddr,
+				r.Method,
+				r.URL.String(),
+				r.Proto,
+				wrappedWriter.statusCode,
+				r.UserAgent(),
+				duration.Seconds()*1000,
+			)
+		}
 	})
 }
 

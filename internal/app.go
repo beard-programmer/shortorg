@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/beard-programmer/shortorg/internal/app"
@@ -20,17 +21,19 @@ import (
 )
 
 type App struct {
-	encodedUrlsStorage *infrastructure.EncodedUrlsStorage
-	tokenKeysStorage   *infrastructure.TokenKeysPostgres
+	encodedUrlsStorage infrastructure.EncodedUrlsStorage
+	tokenKeysStorage   infrastructure.TokenKeysPostgres
 	Logger             *zap.SugaredLogger
 }
 
 func (a *App) New(ctx context.Context) *App {
 	environment := getEnvWithDefault("GO_ENV", "development")
+	concurrency := runtime.GOMAXPROCS(0)
 
 	a.Logger = app.NewZapLogger()
 	a.Logger.Infow("Initializing app",
 		"environment", environment,
+		"concurrency", concurrency,
 	)
 
 	driver := app.RegisterSqlLogger(a.Logger)
@@ -38,9 +41,9 @@ func (a *App) New(ctx context.Context) *App {
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
 	}
-	a.tokenKeysStorage = &infrastructure.TokenKeysPostgres{DB: identityDB}
+	a.tokenKeysStorage = infrastructure.TokenKeysPostgres{DB: identityDB}
 
-	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 20, a.Logger)
+	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 40, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
 	}
@@ -50,14 +53,14 @@ func (a *App) New(ctx context.Context) *App {
 		a.Logger.Fatalf("Failed to set encodedUrlsStore: %v", err)
 	}
 
-	a.encodedUrlsStorage = encodedUrlsStore
+	a.encodedUrlsStorage = *encodedUrlsStore
 
 	return a
 }
 
 func (a *App) StartServer(ctx context.Context) error {
 	//const bufferSize = 60 * 1000 // Target RPS
-	const bufferSize = 1 // Target RPS
+	const bufferSize = 1000 // Target RPS
 
 	saveEncodedUrls := infrastructure.ProcessChan(
 		a.Logger,
@@ -66,13 +69,13 @@ func (a *App) StartServer(ctx context.Context) error {
 		},
 	)
 
-	identitiesBuffered, tokenIdentityProviderErrChan := infrastructure.NewIdentityProviderWithBuffer(ctx, a.tokenKeysStorage, a.Logger, bufferSize)
+	identitiesBuffered, tokenIdentityProviderErrChan := infrastructure.NewIdentityProviderWithBuffer(ctx, &a.tokenKeysStorage, a.Logger, bufferSize)
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, bufferSize)
 	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, infrastructure.UrlParser{}, base58.Codec{}, a.Logger, urlWasEncodedChan)
 	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
-	decodeUrl := decode.NewDecodeFunc(a.Logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, a.encodedUrlsStorage)
+	decodeUrl := decode.NewDecodeFunc(a.Logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, &a.encodedUrlsStorage)
 
 	mux := http.NewServeMux()
 

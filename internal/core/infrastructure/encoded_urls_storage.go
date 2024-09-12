@@ -11,6 +11,7 @@ import (
 	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/dgraph-io/ristretto"
 	ekoCache "github.com/eko/gocache/lib/v4/cache"
+	ristrettoStore "github.com/eko/gocache/store/ristretto/v4"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,40 +26,40 @@ func (e EncodedUrlProviderPostgresError) Error() string {
 
 type encodedUrlsCache = ekoCache.Cache[string]
 
-//func newEncodedUrlsCache(config ristretto.Config) (*encodedUrlsCache, error) {
-//	ristrettoCache, err := ristretto.NewCache(&config)
-//	if err != nil {
-//		return nil, err
-//	}
-//	rStore := ristrettoStore.NewRistretto(ristrettoCache)
-//	cacheManager := ekoCache.New[string](rStore)
-//	return cacheManager, nil
-//}
+func newEncodedUrlsCache(config ristretto.Config) (*encodedUrlsCache, error) {
+	ristrettoCache, err := ristretto.NewCache(&config)
+	if err != nil {
+		return nil, err
+	}
+	rStore := ristrettoStore.NewRistretto(ristrettoCache)
+	cacheManager := ekoCache.New[string](rStore)
+	return cacheManager, nil
+}
 
 type EncodedUrlsStorage struct {
 	db    *sqlx.DB
 	cache *encodedUrlsCache
 }
 
-func (EncodedUrlsStorage) New(db *sqlx.DB, _ *ristretto.Config) (*EncodedUrlsStorage, error) {
+func (EncodedUrlsStorage) New(db *sqlx.DB, cacheConfig *ristretto.Config) (*EncodedUrlsStorage, error) {
 	if db == nil {
 		return nil, errors.New("db is nil")
 	}
 
-	//if cacheConfig == nil {
-	//	cacheConfig = &ristretto.Config{
-	//		NumCounters: 10000000, // number of keys to track frequency of (10M).
-	//		MaxCost:     1 << 30,  // maximum cost of cache (1GB).
-	//		BufferItems: 64,       // number of keys per Get buffer.
-	//	}
-	//}
-	//
-	//_, err := newEncodedUrlsCache(*cacheConfig)
-	//if err != nil {
-	//	return nil, err
-	//}
+	if cacheConfig == nil {
+		cacheConfig = &ristretto.Config{
+			NumCounters: 10000000, // number of keys to track frequency of (10M).
+			MaxCost:     1 << 30,  // maximum cost of cache (1GB).
+			BufferItems: 64,       // number of keys per Get buffer.
+		}
+	}
 
-	return &EncodedUrlsStorage{db, nil}, nil
+	cache, err := newEncodedUrlsCache(*cacheConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EncodedUrlsStorage{db, cache}, nil
 }
 
 type EncodedUrl struct {
@@ -73,10 +74,10 @@ func (e EncodedUrl) OriginalUrl() string {
 func (p *EncodedUrlsStorage) FindOne(ctx context.Context, key core.TokenKey) (string, error) {
 	var url string
 
-	//url, notFound := p.cache.Get(ctx, key.Value())
-	//if notFound == nil {
-	//	return url, nil
-	//}
+	url, notFound := p.cache.Get(ctx, key.Value())
+	if notFound == nil {
+		return url, nil
+	}
 
 	row := p.db.QueryRowxContext(ctx, "SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1", key.Value())
 	err := row.Scan(&url)
@@ -87,10 +88,10 @@ func (p *EncodedUrlsStorage) FindOne(ctx context.Context, key core.TokenKey) (st
 		return "", EncodedUrlProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
 	}
 
-	//err = p.cache.Set(ctx, key.Value(), url)
-	//if err != nil {
-	//	fmt.Printf("FindOne: Error storing in cache key %v value %v", key, url)
-	//}
+	err = p.cache.Set(ctx, key.Value(), url)
+	if err != nil {
+		fmt.Printf("FindOne: Error storing in cache key %v value %v", key, url)
+	}
 	return url, nil
 }
 

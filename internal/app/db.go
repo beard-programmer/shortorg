@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func ConnectDb(configFile, environment string, driver string, maxConnections int, logger *zap.SugaredLogger) (*sqlx.DB, error) {
+func ConnectDb(ctx context.Context, configFile, environment string, driver string, maxConnections int, logger *zap.SugaredLogger) (*sqlx.DB, error) {
 	dbConfig, err := NewConfig(configFile, environment)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func ConnectDb(configFile, environment string, driver string, maxConnections int
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s application_name=backend sslmode=disable",
 		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName)
 
-	db, err := sqlx.Connect(driver, connStr)
+	db, err := sqlx.ConnectContext(ctx, driver, connStr)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)

@@ -4,68 +4,94 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/common"
+	"github.com/beard-programmer/shortorg/internal/simple_types"
 	"go.uber.org/zap"
 )
 
-type UrlWasEncoded struct {
-	URL   string
+type EncodedUrl struct {
+	URL   OriginalURL
 	Token TokenStandard
 }
 
-type Request struct {
-	URL          string
-	EncodeAtHost *string
-}
-
-type IdentifierProvider interface {
-	ProduceTokenIdentifier(ctx context.Context) (*TokenIdentifier, error)
-}
-
-type EncodedUrl struct {
-	Url             string
-	TokenIdentifier *TokenIdentifier
-}
-
-func Encode(
-	ctx context.Context,
-	identityProvider IdentifierProvider,
-	parseUrl func(string) (URL, error),
+func NewEncodeFunc(
+	identityProvider Identities,
+	urlProvider UrlProvider,
+	codecProvider CodecProvider,
 	logger *zap.SugaredLogger,
-	request Request,
-) (*UrlWasEncoded, error) {
-	validatedRequest, err := FromUnvalidatedRequest(
-		parseUrl,
-		request.URL,
-		request.EncodeAtHost,
+	encodedUrlsChan chan<- EncodedUrl,
+) func(context.Context, EncodingRequest) (*EncodedUrl, error) {
+	return func(ctx context.Context, r EncodingRequest) (*EncodedUrl, error) {
+		return encode(ctx, identityProvider, urlProvider, codecProvider, logger, encodedUrlsChan, r)
+	}
+}
+
+type ValidationError struct {
+	Err error
+}
+
+func (e ValidationError) Error() string {
+	return e.Err.Error()
+}
+
+type InfrastructureError struct {
+	Err error
+}
+
+func (e InfrastructureError) Error() string {
+	return e.Err.Error()
+}
+
+type ApplicationError struct {
+	Err error
+}
+
+func (e ApplicationError) Error() string {
+	return e.Err.Error()
+}
+
+func encode(
+	ctx context.Context,
+	identityProvider Identities,
+	urlProvider UrlProvider,
+	codecProvider CodecProvider,
+	logger *zap.SugaredLogger,
+	encodedUrlsChan chan<- EncodedUrl,
+	request EncodingRequest,
+) (*EncodedUrl, error) {
+	validatedRequest, err := NewValidatedRequest(
+		urlProvider.Parse,
+		request.OriginalUrl(),
+		request.Host(),
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("request validation failed: %w", err)
+		return nil, ValidationError{Err: err}
 	}
 
-	tokenIdentifier, err := identityProvider.ProduceTokenIdentifier(ctx)
+	identity, err := identityProvider.GenerateOne(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate identity: %w", err)
+		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate identity: %w", err)}
 	}
 
-	token, err := NewToken(&common.CodedBase58{}, *tokenIdentifier, validatedRequest.TokenHost)
+	token, err := NewToken(codecProvider, *identity, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to make token: %w", err)
+		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}
 	}
 
-	//newCtx, cancelNewCtx := context.WithTimeout(context.Background(), 30*time.Second)
-	//go func(ctx context.Context, validatedRequest *RequestValidated, tokenIdentifier *TokenIdentifier) {
-	//	defer cancelNewCtx()
-	//	err := saveEncodedUrlProvider.SaveEncodedURL(ctx, validatedRequest.OriginalURL, tokenIdentifier.Value())
-	//	if err != nil {
-	//		logger.Errorf("failed to save encoded url: %v", err)
-	//	}
-	//}(newCtx, validatedRequest, tokenIdentifier)
-
-	return &UrlWasEncoded{
+	encodedUrl := EncodedUrl{
 		URL:   validatedRequest.OriginalURL,
 		Token: *token,
-	}, nil
+	}
+	go func() {
+		encodedUrlsChan <- encodedUrl
+	}()
+
+	return &encodedUrl, nil
+}
+
+type Identity = simple_types.IntegerBase58Exp5To6
+
+func NewIdentity(value int64) (*Identity, error) {
+	return simple_types.NewIntegerBase58Exp5To6(value)
 }

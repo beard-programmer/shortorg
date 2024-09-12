@@ -10,65 +10,66 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/app"
 	"github.com/beard-programmer/shortorg/internal/encode"
-	"github.com/beard-programmer/shortorg/internal/encode/infrastructure"
+
+	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
+	infrastructure "github.com/beard-programmer/shortorg/internal/infrastructure"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 type App struct {
-	IdentifierProvider      encode.IdentifierProvider
-	RedisIdentifierProvider encode.IdentifierProvider
-	ParseUrl                func(s string) (encode.URL, error)
-	Logger                  *zap.SugaredLogger
-	Worker                  *encode.UrlSaveWorker
+	identityDb *sqlx.DB
+	mainDb     *sqlx.DB
+	Logger     *zap.SugaredLogger
 }
 
 func (a *App) New(ctx context.Context) *App {
 	environment := getEnvWithDefault("GO_ENV", "development")
 
-	a.Logger = app.InitZapLogger()
+	a.Logger = app.NewZapLogger()
 	a.Logger.Infow("Initializing app",
 		"environment", environment,
 	)
 
 	driver := app.RegisterSqlLogger(a.Logger)
-	identityDB, err := app.ConnectDb("identity_db.json", environment, driver, 50, a.Logger)
+	identityDB, err := app.ConnectDb(ctx, "identity_db.json", environment, driver, 4, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
 	}
+	a.identityDb = identityDB
 
-	redis, err := app.ConnectToRedis(ctx, a.Logger, environment)
-	if err != nil {
-		a.Logger.Fatalf("Failed to connect to redis: %v", err)
-	}
-
-	a.RedisIdentifierProvider = &infrastructure.RedisIdentifierProvider{Redis: redis}
-	a.IdentifierProvider = &infrastructure.PostgresIdentifierProvider{DB: identityDB}
-
-	mainDB, err := app.ConnectDb("db.json", environment, driver, 10, a.Logger)
+	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 20, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
 	}
-	a.Worker = new(encode.UrlSaveWorker).New(&infrastructure.SaveEncodedUrlProvider{DB: mainDB}, a.Logger)
-
-	a.ParseUrl = func(s string) (encode.URL, error) {
-		return infrastructure.ParseURLString(s)
-	}
+	a.mainDb = mainDB
 
 	return a
 }
 
 func (a *App) StartServer(ctx context.Context) error {
-	workerErrChan := make(chan error)
-	a.Worker.Start(ctx, workerErrChan)
+	//const bufferSize = 60 * 1000 // Target RPS
+	const bufferSize = 1 // Target RPS
+
+	saveEncodedUrls := infrastructure.ProcessChan(
+		a.Logger,
+		func(ctx context.Context, encodedUrls []encode.EncodedUrl) error {
+			provider := encodeInfrastructure.EncodedUrlsPostgres{DB: a.mainDb}
+			return provider.SaveMany(ctx, encodedUrls)
+		},
+	)
+
+	identitiesBuffered, tokenIdentityProviderErrChan := encodeInfrastructure.NewIdentityProviderWithBuffer(ctx, &encodeInfrastructure.IdentitiesPostgres{DB: a.identityDb}, a.Logger, bufferSize)
+
+	encodedUrlsChan := make(chan encode.EncodedUrl, bufferSize)
+	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, encodeInfrastructure.UrlParser{}, encodeInfrastructure.CodecBase58{}, a.Logger, encodedUrlsChan)
+	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, encodedUrlsChan)
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc(
-		"/encode", encode.ApiHandler(a.RedisIdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
-	mux.HandleFunc(
-		"/encode2", encode.ApiHandler(a.IdentifierProvider, a.ParseUrl, a.Logger, a.Worker.GetEventChan()))
+	mux.Handle("/encode", encode.HandleEncode(a.Logger, encodeUrl))
 	mux.HandleFunc("/debug/pprof/", http.DefaultServeMux.ServeHTTP)
 
 	loggedMux := app.LoggingMiddleware(a.Logger, mux)
@@ -89,6 +90,14 @@ func (a *App) StartServer(ctx context.Context) error {
 			serverErrChan <- err
 		}
 		close(serverErrChan)
+	}()
+
+	go func() {
+		for err := range saveEncodedUrlsErrChan {
+			// TODO: do something
+			a.Logger.Errorf("save url returned error: %v", err)
+		}
+
 	}()
 
 	select {
@@ -113,8 +122,11 @@ func (a *App) StartServer(ctx context.Context) error {
 			return err
 		}
 		return nil
-	case err := <-workerErrChan:
-		a.Logger.Errorf("Worker returned error, cant proceed: %v", err)
+	//case err := <-saveEncodedUrlsErrChan:
+	//	a.Logger.Errorf("save url returned error: %v", err)
+	//	return err
+	case err := <-tokenIdentityProviderErrChan:
+		a.Logger.Errorf("Token producer returned err, cant proceed: %v", err)
 		return err
 	}
 

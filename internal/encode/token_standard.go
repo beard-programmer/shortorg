@@ -1,16 +1,17 @@
 package encode
 
 type TokenStandard struct {
-	TokenIdentifier TokenIdentifier
-	TokenHost       TokenHost
-	TokenEncoded    TokenEncoded
+	Identity     Identity
+	TokenHost    TokenHost
+	TokenEncoded TokenEncoded
+	OriginalURL  OriginalURL
 }
 
-func (_ TokenStandard) New(codec Codec, tokenIdentifier TokenIdentifier, tokenHost TokenHost) (*TokenStandard, error) {
-	tokenEncoded, err := new(TokenEncoded).FromString(codec.Encode(tokenIdentifier.Value()))
+func NewTokenStandard(codec CodecProvider, identity Identity, tokenHost TokenHost, originalUrl OriginalURL) (*TokenStandard, error) {
+	tokenEncoded, err := NewTokenEncoded(codec.Encode(identity.Value()))
 	if err != nil {
 		return nil, err
 	}
 
-	return &TokenStandard{tokenIdentifier, tokenHost, *tokenEncoded}, nil
+	return &TokenStandard{identity, tokenHost, *tokenEncoded, originalUrl}, nil
 }

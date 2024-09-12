@@ -32,7 +32,7 @@ type APIErrResponse struct {
 	Message string `json:"message"`
 }
 
-func HandleEncode(
+func HttpHandler(
 	logger *zap.SugaredLogger,
 	encodeFunc func(context.Context, EncodingRequest) (*UrlWasEncoded, error),
 ) http.Handler {

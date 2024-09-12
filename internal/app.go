@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/beard-programmer/shortorg/internal/app"
+	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
 	infrastructure "github.com/beard-programmer/shortorg/internal/infrastructure"
@@ -67,9 +68,12 @@ func (a *App) StartServer(ctx context.Context) error {
 	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, encodeInfrastructure.UrlParser{}, encodeInfrastructure.CodecBase58{}, a.Logger, urlWasEncodedChan)
 	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
+	decodeUrl := decode.NewDecodeFunc(a.Logger)
+
 	mux := http.NewServeMux()
 
-	mux.Handle("/encode", encode.HandleEncode(a.Logger, encodeUrl))
+	mux.Handle("/encode", encode.HttpHandler(a.Logger, encodeUrl))
+	mux.Handle("/decode", decode.HttpHandler(a.Logger, decodeUrl))
 	mux.HandleFunc("/debug/pprof/", http.DefaultServeMux.ServeHTTP)
 
 	loggedMux := app.LoggingMiddleware(a.Logger, mux)

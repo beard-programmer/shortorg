@@ -14,7 +14,7 @@ type UrlWasEncoded struct {
 func NewEncodeFunc(
 	keyIssuer KeyIssuer,
 	urlParser UrlParser,
-	codec Codec,
+	codec Encoder,
 	logger *zap.SugaredLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 ) func(context.Context, EncodingRequest) (*UrlWasEncoded, error) {
@@ -51,7 +51,7 @@ func encode(
 	ctx context.Context,
 	keyIssuer KeyIssuer,
 	urlParser UrlParser,
-	codec Codec,
+	codec Encoder,
 	logger *zap.SugaredLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 	request EncodingRequest,

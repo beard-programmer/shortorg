@@ -2,6 +2,8 @@ package encode
 
 import (
 	"fmt"
+
+	"github.com/beard-programmer/shortorg/internal/core"
 )
 
 type EncodingRequest interface {
@@ -10,12 +12,12 @@ type EncodingRequest interface {
 }
 
 type ValidatedRequest struct {
-	OriginalURL OriginalURL
+	OriginalURL core.OriginalURL
 	TokenHost   TokenHost
 }
 
 func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*ValidatedRequest, error) {
-	originalUrl, err := OriginalURLFromString(urlParser, request.OriginalUrl())
+	originalUrl, err := core.OriginalURLFromString(urlParser, request.OriginalUrl())
 	if err != nil {
 		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}
@@ -25,7 +27,7 @@ func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*Validat
 		return nil, err
 	}
 
-	if originalUrl.url.Hostname() == tokenHost.Hostname() {
+	if originalUrl.Hostname() == tokenHost.Hostname() {
 		return nil, fmt.Errorf("request validation failed: cannot encode self")
 	}
 

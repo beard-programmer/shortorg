@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/simple_types"
+	"github.com/beard-programmer/shortorg/internal/base58"
+	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type UnclaimedKey = simple_types.IntegerBase58Exp5To6
+type UnclaimedKey = base58.IntegerExp5To6
 type TokenHost interface {
 	Hostname() string
 }
@@ -28,16 +29,16 @@ func (t *TokenHostStandard) Hostname() string {
 	return StandardTokenHost
 }
 
-type TokenKeyEncoded = simple_types.StringBase58Exp5To6
+type TokenKeyEncoded = base58.StringExp5To6
 
 type TokenStandard struct {
 	Key         UnclaimedKey
 	KeyEncoded  TokenKeyEncoded
 	Host        TokenHost
-	OriginalURL OriginalURL
+	OriginalURL core.OriginalURL
 }
 
-func NewToken(codec Codec, tokenKey UnclaimedKey, tokenHost TokenHost, originalUrl OriginalURL) (*TokenStandard, error) {
+func NewToken(codec Encoder, tokenKey UnclaimedKey, tokenHost TokenHost, originalUrl core.OriginalURL) (*TokenStandard, error) {
 	switch tokenHost.(type) {
 	case *TokenHostStandard:
 		return TokenStandard{}.new(codec, tokenKey, tokenHost, originalUrl)
@@ -46,7 +47,7 @@ func NewToken(codec Codec, tokenKey UnclaimedKey, tokenHost TokenHost, originalU
 	}
 }
 
-func (TokenStandard) new(codec Codec, tokenKey UnclaimedKey, tokenHost TokenHost, originalUrl OriginalURL) (*TokenStandard, error) {
+func (TokenStandard) new(codec Encoder, tokenKey UnclaimedKey, tokenHost TokenHost, originalUrl core.OriginalURL) (*TokenStandard, error) {
 	tokenKeyEncoded, err := TokenKeyEncoded{}.New(codec.Encode(tokenKey.Value()))
 	if err != nil {
 		return nil, err

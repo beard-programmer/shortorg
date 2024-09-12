@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/beard-programmer/shortorg/internal/core"
 )
 
 type ParsingError struct {
@@ -34,7 +34,7 @@ func (u parsedUrl) String() string {
 
 type UrlParser struct{}
 
-func (UrlParser) Parse(urlString string) (encode.URL, error) {
+func (UrlParser) Parse(urlString string) (core.URL, error) {
 	if urlString == "" {
 		return nil, ParsingError{Message: "parsedUrl must be a non-empty string."}
 	}
@@ -50,20 +50,3 @@ func (UrlParser) Parse(urlString string) (encode.URL, error) {
 
 	return &parsedUrl{uri: parsed}, nil
 }
-
-//func ParseURLString(urlString string) (*parsedUrl, error) {
-//	if urlString == "" {
-//		return nil, ParsingError{Message: "parsedUrl must be a non-empty string."}
-//	}
-//
-//	if len(urlString) > 2048 {
-//		return nil, ParsingError{Message: "parsedUrl too long."}
-//	}
-//
-//	parsed, err := url.ParseRequestURI(urlString)
-//	if err != nil {
-//		return nil, ParsingError{Message: fmt.Sprintf("Failed to parse parsedUrl: %v", err)}
-//	}
-//
-//	return &parsedUrl{uri: parsed}, nil
-//}

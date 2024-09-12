@@ -1,24 +1,19 @@
 package encode
 
-import "context"
+import (
+	"context"
+
+	"github.com/beard-programmer/shortorg/internal/core"
+)
 
 type KeyIssuer interface {
 	Issue(ctx context.Context) (*UnclaimedKey, error)
 }
 
 type UrlParser interface {
-	Parse(string) (URL, error)
-}
-
-type Codec interface {
-	Encoder
-	Decoder
+	core.UrlParser
 }
 
 type Encoder interface {
 	Encode(int64) string
-}
-
-type Decoder interface {
-	Decode(string) (int64, error)
 }

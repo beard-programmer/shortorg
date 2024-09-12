@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/beard-programmer/shortorg/internal/app"
+	"github.com/beard-programmer/shortorg/internal/base58"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
@@ -65,7 +66,7 @@ func (a *App) StartServer(ctx context.Context) error {
 	identitiesBuffered, tokenIdentityProviderErrChan := encodeInfrastructure.NewIdentityProviderWithBuffer(ctx, &encodeInfrastructure.IdentitiesPostgres{DB: a.identityDb}, a.Logger, bufferSize)
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, bufferSize)
-	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, encodeInfrastructure.UrlParser{}, encodeInfrastructure.CodecBase58{}, a.Logger, urlWasEncodedChan)
+	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, infrastructure.UrlParser{}, base58.Codec{}, a.Logger, urlWasEncodedChan)
 	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
 	decodeUrl := decode.NewDecodeFunc(a.Logger)

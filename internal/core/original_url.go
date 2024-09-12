@@ -1,4 +1,4 @@
-package encode
+package core
 
 import (
 	"errors"
@@ -9,6 +9,14 @@ type OriginalURL struct {
 	url URL
 }
 
+func (u OriginalURL) Scheme() string {
+	return u.url.Scheme()
+}
+
+func (u OriginalURL) Hostname() string {
+	return u.url.Hostname()
+}
+
 func (u OriginalURL) String() string {
 	return u.url.String()
 }
@@ -17,6 +25,10 @@ type URL interface {
 	Scheme() string
 	Hostname() string
 	String() string
+}
+
+type UrlParser interface {
+	Parse(string) (URL, error)
 }
 
 func OriginalURLFromString(parseUrl UrlParser, s string) (*OriginalURL, error) {

@@ -21,7 +21,7 @@ type EncodedUrlsPostgres struct {
 	DB *sqlx.DB
 }
 
-func (p *EncodedUrlsPostgres) SaveMany(ctx context.Context, encodedUrls []encode.EncodedUrl) error {
+func (p *EncodedUrlsPostgres) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
 	// Note: NamedExecContext is generating invalid sql so building query manually.
 	valueStrings := make([]string, 0, len(encodedUrls))
 	valueArgs := make([]interface{}, 0, len(encodedUrls)*2)
@@ -29,7 +29,7 @@ func (p *EncodedUrlsPostgres) SaveMany(ctx context.Context, encodedUrls []encode
 	for i, encodedUrl := range encodedUrls {
 		// Prepare placeholder for each row. $1, $2, $3, $4...
 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
-		valueArgs = append(valueArgs, encodedUrl.Token.Identity.Value(), encodedUrl.URL.Value)
+		valueArgs = append(valueArgs, encodedUrl.Token.Key.Value(), encodedUrl.Token.OriginalURL.String())
 	}
 
 	query := fmt.Sprintf(

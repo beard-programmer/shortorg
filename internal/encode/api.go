@@ -34,7 +34,7 @@ type APIErrResponse struct {
 
 func HandleEncode(
 	logger *zap.SugaredLogger,
-	encodeFunc func(context.Context, EncodingRequest) (*EncodedUrl, error),
+	encodeFunc func(context.Context, EncodingRequest) (*UrlWasEncoded, error),
 ) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,7 @@ func HandleEncode(
 				return
 			}
 
-			encodedUrl, err := encodeFunc(r.Context(), apiRequest)
+			urlWasEncoded, err := encodeFunc(r.Context(), apiRequest)
 
 			if err != nil {
 				handleError(w, err)
@@ -55,8 +55,8 @@ func HandleEncode(
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			response := APIResponse{
-				URL:      encodedUrl.URL.Value,
-				ShortURL: fmt.Sprintf("https://%s/%s", encodedUrl.Token.TokenHost.Host(), encodedUrl.Token.TokenEncoded.Value()),
+				URL:      urlWasEncoded.Token.OriginalURL.String(),
+				ShortURL: fmt.Sprintf("https://%s/%s", urlWasEncoded.Token.Host.Hostname(), urlWasEncoded.Token.KeyEncoded.Value()),
 			}
 			if err := json.NewEncoder(w).Encode(response); err != nil {
 				http.Error(w, "Failed to write response", http.StatusInternalServerError)
@@ -67,6 +67,8 @@ func HandleEncode(
 
 func handleError(w http.ResponseWriter, err error) {
 	var apiErr APIErrResponse
+
+	// TODO: fix
 	switch e := err.(type) {
 	case ValidationError:
 		w.WriteHeader(http.StatusBadRequest)
@@ -87,7 +89,7 @@ func handleError(w http.ResponseWriter, err error) {
 }
 
 //
-//func ApiHandler(identityProvider Identities, urlProvider UrlProvider, logger *zap.SugaredLogger, encodedUrlChan chan<- EncodedUrl) http.HandlerFunc {
+//func ApiHandler(identityProvider KeyIssuer, urlProvider UrlParser, logger *zap.SugaredLogger, encodedUrlChan chan<- EncodedUrl) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.EncodingRequest) {
 //		var req APIRequest
 //		err := json.NewDecoder(r.Body).Decode(&req)
@@ -116,7 +118,7 @@ func handleError(w http.ResponseWriter, err error) {
 //		w.WriteHeader(http.StatusOK)
 //		err = json.NewEncoder(w).Encode(APIResponse{
 //			URL:      urlWasEncoded.URL,
-//			ShortURL: "https://" + urlWasEncoded.Token.TokenHost.Host() + "/" + urlWasEncoded.Token.TokenEncoded.Value(),
+//			ShortURL: "https://" + urlWasEncoded.Token.Value.Value() + "/" + urlWasEncoded.Token.KeyEncoded.value(),
 //		})
 //		if err != nil {
 //			panic(err)

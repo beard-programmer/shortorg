@@ -18,24 +18,24 @@ func (e IdentityProviderWithBufferError) Error() string {
 }
 
 type IdentityProviderBulk interface {
-	GenerateMany(ctx context.Context, batchSize int) ([]*encode.Identity, error)
+	GenerateMany(ctx context.Context, batchSize int) ([]*encode.UnclaimedKey, error)
 }
 
 type ProviderBulk interface {
-	ProvideBulk(ctx context.Context, batchSize int) ([]*encode.Identity, error)
+	ProvideBulk(ctx context.Context, batchSize int) ([]*encode.UnclaimedKey, error)
 }
 
 type IdentityProviderWithBuffer struct {
 	provider     IdentityProviderBulk
 	logger       *zap.SugaredLogger
-	identityChan chan encode.Identity
+	identityChan chan encode.UnclaimedKey
 }
 
 func NewIdentityProviderWithBuffer(ctx context.Context, provider IdentityProviderBulk, logger *zap.SugaredLogger, bufferSize int) (*IdentityProviderWithBuffer, <-chan error) {
 	producer := IdentityProviderWithBuffer{
 		provider:     provider,
 		logger:       logger,
-		identityChan: make(chan encode.Identity, bufferSize),
+		identityChan: make(chan encode.UnclaimedKey, bufferSize),
 	}
 
 	errChan := make(chan error, 1)
@@ -45,7 +45,7 @@ func NewIdentityProviderWithBuffer(ctx context.Context, provider IdentityProvide
 	return &producer, errChan
 }
 
-func (s *IdentityProviderWithBuffer) GenerateOne(ctx context.Context) (*encode.Identity, error) {
+func (s *IdentityProviderWithBuffer) Issue(ctx context.Context) (*encode.UnclaimedKey, error) {
 	for {
 		select {
 		case ti := <-s.identityChan:

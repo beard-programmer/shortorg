@@ -4,24 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/simple_types"
 	"go.uber.org/zap"
 )
 
-type EncodedUrl struct {
-	URL   OriginalURL
+type UrlWasEncoded struct {
 	Token TokenStandard
 }
 
 func NewEncodeFunc(
-	identityProvider Identities,
-	urlProvider UrlProvider,
-	codecProvider CodecProvider,
+	keyIssuer KeyIssuer,
+	urlParser UrlParser,
+	codec Codec,
 	logger *zap.SugaredLogger,
-	encodedUrlsChan chan<- EncodedUrl,
-) func(context.Context, EncodingRequest) (*EncodedUrl, error) {
-	return func(ctx context.Context, r EncodingRequest) (*EncodedUrl, error) {
-		return encode(ctx, identityProvider, urlProvider, codecProvider, logger, encodedUrlsChan, r)
+	urlWasEncodedChan chan<- UrlWasEncoded,
+) func(context.Context, EncodingRequest) (*UrlWasEncoded, error) {
+	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
+		return encode(ctx, keyIssuer, urlParser, codec, logger, urlWasEncodedChan, r)
 	}
 }
 
@@ -51,47 +49,37 @@ func (e ApplicationError) Error() string {
 
 func encode(
 	ctx context.Context,
-	identityProvider Identities,
-	urlProvider UrlProvider,
-	codecProvider CodecProvider,
+	keyIssuer KeyIssuer,
+	urlParser UrlParser,
+	codec Codec,
 	logger *zap.SugaredLogger,
-	encodedUrlsChan chan<- EncodedUrl,
+	urlWasEncodedChan chan<- UrlWasEncoded,
 	request EncodingRequest,
-) (*EncodedUrl, error) {
+) (*UrlWasEncoded, error) {
 	validatedRequest, err := NewValidatedRequest(
-		urlProvider.Parse,
-		request.OriginalUrl(),
-		request.Host(),
+		urlParser,
+		request,
 	)
 
 	if err != nil {
 		return nil, ValidationError{Err: err}
 	}
 
-	identity, err := identityProvider.GenerateOne(ctx)
+	unclaimedKey, err := keyIssuer.Issue(ctx)
 	if err != nil {
-		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate identity: %w", err)}
+		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate unclaimedKey: %w", err)}
 	}
 
-	token, err := NewToken(codecProvider, *identity, validatedRequest.TokenHost, validatedRequest.OriginalURL)
+	token, err := NewToken(codec, *unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
 		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}
 	}
 
-	encodedUrl := EncodedUrl{
-		URL:   validatedRequest.OriginalURL,
-		Token: *token,
-	}
+	event := UrlWasEncoded{*token}
 	go func() {
-		encodedUrlsChan <- encodedUrl
+		urlWasEncodedChan <- event
 	}()
 
-	return &encodedUrl, nil
-}
-
-type Identity = simple_types.IntegerBase58Exp5To6
-
-func NewIdentity(value int64) (*Identity, error) {
-	return simple_types.NewIntegerBase58Exp5To6(value)
+	return &event, nil
 }

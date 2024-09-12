@@ -6,7 +6,11 @@ import (
 )
 
 type OriginalURL struct {
-	Value string
+	url URL
+}
+
+func (u OriginalURL) String() string {
+	return u.url.String()
 }
 
 type URL interface {
@@ -15,19 +19,19 @@ type URL interface {
 	String() string
 }
 
-func OriginalURLFromString(parseUrl func(string) (URL, error), s string) (*OriginalURL, error) {
-	uri, err := parseUrl(s)
+func OriginalURLFromString(parseUrl UrlParser, s string) (*OriginalURL, error) {
+	uri, err := parseUrl.Parse(s)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing URL: %w", err)
 	}
 
 	if 255 <= len(uri.String()) {
-		return nil, errors.New("Value is too long! Max 255 characters allowed")
+		return nil, errors.New("value is too long! Max 255 characters allowed")
 	}
 
 	if uri.Scheme() != "http" && uri.Scheme() != "https" {
 		return nil, fmt.Errorf("invalid scheme %s", uri.Scheme())
 	}
 
-	return &OriginalURL{Value: uri.String()}, nil
+	return &OriginalURL{url: uri}, nil
 }

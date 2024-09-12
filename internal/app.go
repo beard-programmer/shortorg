@@ -10,9 +10,9 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/app"
 	"github.com/beard-programmer/shortorg/internal/encode"
-
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
 	infrastructure "github.com/beard-programmer/shortorg/internal/infrastructure"
+
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
@@ -55,7 +55,7 @@ func (a *App) StartServer(ctx context.Context) error {
 
 	saveEncodedUrls := infrastructure.ProcessChan(
 		a.Logger,
-		func(ctx context.Context, encodedUrls []encode.EncodedUrl) error {
+		func(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
 			provider := encodeInfrastructure.EncodedUrlsPostgres{DB: a.mainDb}
 			return provider.SaveMany(ctx, encodedUrls)
 		},
@@ -63,9 +63,9 @@ func (a *App) StartServer(ctx context.Context) error {
 
 	identitiesBuffered, tokenIdentityProviderErrChan := encodeInfrastructure.NewIdentityProviderWithBuffer(ctx, &encodeInfrastructure.IdentitiesPostgres{DB: a.identityDb}, a.Logger, bufferSize)
 
-	encodedUrlsChan := make(chan encode.EncodedUrl, bufferSize)
-	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, encodeInfrastructure.UrlParser{}, encodeInfrastructure.CodecBase58{}, a.Logger, encodedUrlsChan)
-	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, encodedUrlsChan)
+	urlWasEncodedChan := make(chan encode.UrlWasEncoded, bufferSize)
+	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, encodeInfrastructure.UrlParser{}, encodeInfrastructure.CodecBase58{}, a.Logger, urlWasEncodedChan)
+	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
 	mux := http.NewServeMux()
 

@@ -14,19 +14,23 @@ type ValidatedRequest struct {
 	TokenHost   TokenHost
 }
 
-func NewValidatedRequest(parseUrl func(string) (URL, error), url string, encodeAtHost *string) (*ValidatedRequest, error) {
-	encodeWhat, err := OriginalURLFromString(parseUrl, url)
+func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*ValidatedRequest, error) {
+	originalUrl, err := OriginalURLFromString(urlParser, request.OriginalUrl())
 	if err != nil {
-		return nil, fmt.Errorf("request validation failed: %w", err)
+		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}
 
-	encodeWhere, err := TokenHostFromString(encodeAtHost)
+	tokenHost, err := TokenHostFromString(request.Host())
 	if err != nil {
 		return nil, err
 	}
 
+	if originalUrl.url.Hostname() == tokenHost.Hostname() {
+		return nil, fmt.Errorf("request validation failed: cannot encode self")
+	}
+
 	return &ValidatedRequest{
-		OriginalURL: *encodeWhat,
-		TokenHost:   encodeWhere,
+		OriginalURL: *originalUrl,
+		TokenHost:   tokenHost,
 	}, nil
 }

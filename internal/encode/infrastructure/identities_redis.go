@@ -21,7 +21,7 @@ type IdentitiesRedis struct {
 	Redis *redis.Client
 }
 
-func (p *IdentitiesRedis) GenerateOne(ctx context.Context) (*encode.Identity, error) {
+func (p *IdentitiesRedis) Issue(ctx context.Context) (*encode.UnclaimedKey, error) {
 	cmd := p.Redis.IncrBy(ctx, "token_identifier", 2)
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), context.Canceled) {
@@ -32,5 +32,5 @@ func (p *IdentitiesRedis) GenerateOne(ctx context.Context) (*encode.Identity, er
 	}
 
 	value := cmd.Val()
-	return encode.NewIdentity(value)
+	return encode.UnclaimedKey{}.New(value)
 }

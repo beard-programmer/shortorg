@@ -2,23 +2,23 @@ package encode
 
 import "context"
 
-type Identities interface {
-	GenerateOne(ctx context.Context) (*Identity, error)
+type KeyIssuer interface {
+	Issue(ctx context.Context) (*UnclaimedKey, error)
 }
 
-type UrlProvider interface {
+type UrlParser interface {
 	Parse(string) (URL, error)
 }
 
-type CodecProvider interface {
-	EncodingProvider
-	DecodingProvider
+type Codec interface {
+	Encoder
+	Decoder
 }
 
-type EncodingProvider interface {
+type Encoder interface {
 	Encode(int64) string
 }
 
-type DecodingProvider interface {
+type Decoder interface {
 	Decode(string) (int64, error)
 }

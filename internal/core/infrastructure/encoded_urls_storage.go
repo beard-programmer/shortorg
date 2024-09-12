@@ -17,10 +17,10 @@ type EncodedUrlProviderPostgresError struct {
 }
 
 func (e EncodedUrlProviderPostgresError) Error() string {
-	return fmt.Sprintf("EncodedUrlsPostgres error: %v", e.Err)
+	return fmt.Sprintf("EncodedUrlsStorage error: %v", e.Err)
 }
 
-type EncodedUrlsPostgres struct {
+type EncodedUrlsStorage struct {
 	DB *sqlx.DB
 }
 
@@ -33,7 +33,7 @@ func (e EncodedUrl) OriginalUrl() string {
 	return e.Url
 }
 
-func (p *EncodedUrlsPostgres) FindOne(ctx context.Context, key core.TokenKey) (string, error) {
+func (p *EncodedUrlsStorage) FindOne(ctx context.Context, key core.TokenKey) (string, error) {
 	var url string
 
 	row := p.DB.QueryRowxContext(ctx, "SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1", key.Value())
@@ -48,7 +48,7 @@ func (p *EncodedUrlsPostgres) FindOne(ctx context.Context, key core.TokenKey) (s
 	return url, nil
 }
 
-func (p *EncodedUrlsPostgres) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
+func (p *EncodedUrlsStorage) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
 	// Note: NamedExecContext is generating invalid sql so building query manually.
 	valueStrings := make([]string, 0, len(encodedUrls))
 	valueArgs := make([]interface{}, 0, len(encodedUrls)*2)

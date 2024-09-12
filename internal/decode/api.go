@@ -18,8 +18,8 @@ func (r APIRequest) Url() string {
 }
 
 type APIResponse struct {
-	URL      string `json:"url"`
-	ShortURL string `json:"short_url"`
+	OriginalURL string `json:"url"`
+	ShortURL    string `json:"short_url"`
 }
 
 type APIErrResponse struct {
@@ -29,7 +29,7 @@ type APIErrResponse struct {
 
 func HttpHandler(
 	logger *zap.SugaredLogger,
-	decodeFunc func(context.Context, DecodingRequest) (*UrlWasDecoded, error),
+	decodeFunc func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error),
 ) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -40,18 +40,28 @@ func HttpHandler(
 				return
 			}
 
-			_, err = decodeFunc(r.Context(), apiRequest)
+			urlWasDecoded, originalWasNotFound, err := decodeFunc(r.Context(), apiRequest)
 
 			if err != nil {
 				handleError(w, err)
+				return
+			}
+			if originalWasNotFound != nil {
+				var apiErr APIErrResponse
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				apiErr = APIErrResponse{Code: "originalWasNotFound", Message: ""}
+				if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+					http.Error(w, "Failed to write error response", http.StatusInternalServerError)
+				}
 				return
 			}
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			response := APIResponse{
-				URL:      "",
-				ShortURL: "",
+				OriginalURL: urlWasDecoded.Token.OriginalURL.String(),
+				ShortURL:    fmt.Sprintf("https://%s/%s", urlWasDecoded.Token.Host.Hostname(), urlWasDecoded.Token.KeyEncoded.Value()),
 			}
 			if err := json.NewEncoder(w).Encode(response); err != nil {
 				http.Error(w, "Failed to write response", http.StatusInternalServerError)

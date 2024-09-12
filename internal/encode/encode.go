@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/beard-programmer/shortorg/internal/core"
 	"go.uber.org/zap"
 )
 
 type UrlWasEncoded struct {
-	Token TokenStandard
+	Token core.TokenStandard
 }
 
 func NewEncodeFunc(
@@ -70,7 +71,7 @@ func encode(
 		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate unclaimedKey: %w", err)}
 	}
 
-	token, err := NewToken(codec, *unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
+	token, err := core.NewToken(codec, *unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
 		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}

@@ -138,7 +138,7 @@ func (h *Hooks) After(ctx context.Context, query string, args ...interface{}) (c
 
 	duration := time.Since(startTime)
 
-	if 200*time.Millisecond < duration {
+	if 20*time.Millisecond < duration {
 		h.Logger.Warnf("Query completed",
 			"query", query,
 			"args", args,

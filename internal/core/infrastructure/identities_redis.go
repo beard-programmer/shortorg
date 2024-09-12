@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/beard-programmer/shortorg/internal/core"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,7 +21,7 @@ type IdentitiesRedis struct {
 	Redis *redis.Client
 }
 
-func (p *IdentitiesRedis) Issue(ctx context.Context) (*encode.UnclaimedKey, error) {
+func (p *IdentitiesRedis) Issue(ctx context.Context) (*core.TokenKey, error) {
 	cmd := p.Redis.IncrBy(ctx, "token_identifier", 2)
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), context.Canceled) {
@@ -32,5 +32,5 @@ func (p *IdentitiesRedis) Issue(ctx context.Context) (*encode.UnclaimedKey, erro
 	}
 
 	value := cmd.Val()
-	return encode.UnclaimedKey{}.New(value)
+	return core.TokenKey{}.New(value)
 }

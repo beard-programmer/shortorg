@@ -13,7 +13,7 @@ type EncodingRequest interface {
 
 type ValidatedRequest struct {
 	OriginalURL core.OriginalURL
-	TokenHost   TokenHost
+	TokenHost   core.TokenHost
 }
 
 func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*ValidatedRequest, error) {
@@ -22,7 +22,7 @@ func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*Validat
 		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}
 
-	tokenHost, err := TokenHostFromString(request.Host())
+	tokenHost, err := core.TokenHostFromString(request.Host())
 	if err != nil {
 		return nil, err
 	}

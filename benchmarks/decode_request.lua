@@ -1,34 +1,36 @@
--- Define the Base58 alphabet
-local ALPHABET_BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-local BASE58 = 58
+-- Read all short URLs from the file into a table
+local short_urls = {}
 
--- Function to encode an integer into a Base58 string
-local function encode(key)
-    local encoded = ""
-
-    -- Perform Base58 encoding
-    while key > 0 do
-        local remainder = key % BASE58
-        encoded = ALPHABET_BASE58:sub(remainder + 1, remainder + 1) .. encoded
-        key = math.floor(key / BASE58)
+local function loadShortUrlsFromFile(filename)
+    local file = io.open(filename, "r")
+    if not file then
+        error("Could not open file " .. filename)
     end
 
-    return encoded
+    for line in file:lines() do
+        table.insert(short_urls, line)
+    end
+    file:close()
 end
 
--- Example usage
-local integer_to_encode = 657508406
-local base58_string = encode(integer_to_encode)
+-- Load the short URLs from the file
+loadShortUrlsFromFile("short_urls.txt")
 
--- Counter for Base58 values
-local counter = 0
+-- Index for keeping track of the current short URL
+local current_index = 1
 
--- Function to generate HTTP request with sequential Base58 values
+-- HTTP request function to be called for each request
 request = function()
-    local suffix = encode(integer_to_encode + counter)
-    counter = counter + 1
+    if current_index > #short_urls then
+        current_index = 1 -- Reset the index if we reach the end of the list
+    end
+
+    -- Use the short URL from the list
+    local short_url = short_urls[current_index]
+    current_index = current_index + 1
+
     -- Create the HTTP request body
-    local body = '{"short_url": "https://short.est/' .. suffix .. '"}'
+    local body = '{"short_url": "' .. short_url .. '"}'
 
     -- Return the HTTP request to be sent
     return wrk.format("POST", "/decode", {["Content-Type"] = "application/json"}, body)

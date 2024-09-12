@@ -34,7 +34,7 @@ type UrlParser interface {
 func OriginalURLFromString(parseUrl UrlParser, s string) (*OriginalURL, error) {
 	uri, err := parseUrl.Parse(s)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing URL: %w", err)
+		return nil, fmt.Errorf("error parsing OriginalURL: %w", err)
 	}
 
 	if 255 <= len(uri.String()) {

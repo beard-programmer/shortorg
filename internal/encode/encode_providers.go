@@ -7,7 +7,7 @@ import (
 )
 
 type KeyIssuer interface {
-	Issue(ctx context.Context) (*UnclaimedKey, error)
+	Issue(ctx context.Context) (*core.TokenKey, error)
 }
 
 type UrlParser interface {
@@ -15,5 +15,5 @@ type UrlParser interface {
 }
 
 type Encoder interface {
-	Encode(int64) string
+	core.Encoder
 }

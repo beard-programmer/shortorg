@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/beard-programmer/shortorg/internal/core"
 	"go.uber.org/zap"
 )
 
@@ -18,24 +18,24 @@ func (e IdentityProviderWithBufferError) Error() string {
 }
 
 type IdentityProviderBulk interface {
-	GenerateMany(ctx context.Context, batchSize int) ([]*encode.UnclaimedKey, error)
+	GenerateMany(ctx context.Context, batchSize int) ([]*core.TokenKey, error)
 }
 
 type ProviderBulk interface {
-	ProvideBulk(ctx context.Context, batchSize int) ([]*encode.UnclaimedKey, error)
+	ProvideBulk(ctx context.Context, batchSize int) ([]*core.TokenKey, error)
 }
 
 type IdentityProviderWithBuffer struct {
 	provider     IdentityProviderBulk
 	logger       *zap.SugaredLogger
-	identityChan chan encode.UnclaimedKey
+	identityChan chan core.TokenKey
 }
 
 func NewIdentityProviderWithBuffer(ctx context.Context, provider IdentityProviderBulk, logger *zap.SugaredLogger, bufferSize int) (*IdentityProviderWithBuffer, <-chan error) {
 	producer := IdentityProviderWithBuffer{
 		provider:     provider,
 		logger:       logger,
-		identityChan: make(chan encode.UnclaimedKey, bufferSize),
+		identityChan: make(chan core.TokenKey, bufferSize),
 	}
 
 	errChan := make(chan error, 1)
@@ -45,7 +45,7 @@ func NewIdentityProviderWithBuffer(ctx context.Context, provider IdentityProvide
 	return &producer, errChan
 }
 
-func (s *IdentityProviderWithBuffer) Issue(ctx context.Context) (*encode.UnclaimedKey, error) {
+func (s *IdentityProviderWithBuffer) Issue(ctx context.Context) (*core.TokenKey, error) {
 	for {
 		select {
 		case ti := <-s.identityChan:

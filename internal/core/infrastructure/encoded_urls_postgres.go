@@ -2,9 +2,12 @@ package infrastructure
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/beard-programmer/shortorg/internal/core"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/jmoiron/sqlx"
 )
@@ -19,6 +22,30 @@ func (e EncodedUrlProviderPostgresError) Error() string {
 
 type EncodedUrlsPostgres struct {
 	DB *sqlx.DB
+}
+
+type EncodedUrl struct {
+	TokenIdentifier int64  `db:"token_identifier"`
+	Url             string `db:"url"`
+}
+
+func (e EncodedUrl) OriginalUrl() string {
+	return e.Url
+}
+
+func (p *EncodedUrlsPostgres) FindOne(ctx context.Context, key core.TokenKey) (string, error) {
+	var url string
+
+	row := p.DB.QueryRowxContext(ctx, "SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1", key.Value())
+	err := row.Scan(&url)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", EncodedUrlProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
+	}
+
+	return url, nil
 }
 
 func (p *EncodedUrlsPostgres) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {

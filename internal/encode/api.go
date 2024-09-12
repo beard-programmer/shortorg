@@ -99,7 +99,7 @@ func handleError(w http.ResponseWriter, err error) {
 //		}
 //
 //		urlWasEncoded, err := Encode(r.Context(), identityProvider, urlProvider, logger, EncodingRequest{
-//			URL:          req.URL,
+//			OriginalURL:          req.OriginalURL,
 //			EncodeAtHost: req.EncodeAtHost,
 //		})
 //
@@ -117,7 +117,7 @@ func handleError(w http.ResponseWriter, err error) {
 //		w.Header().Set("Content-Type", "application/json")
 //		w.WriteHeader(http.StatusOK)
 //		err = json.NewEncoder(w).Encode(APIResponse{
-//			URL:      urlWasEncoded.URL,
+//			OriginalURL:      urlWasEncoded.OriginalURL,
 //			ShortURL: "https://" + urlWasEncoded.Token.Value.Value() + "/" + urlWasEncoded.Token.KeyEncoded.value(),
 //		})
 //		if err != nil {

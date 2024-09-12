@@ -10,11 +10,10 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/app"
 	"github.com/beard-programmer/shortorg/internal/base58"
+	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/decode"
+	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
-	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
-	infrastructure "github.com/beard-programmer/shortorg/internal/infrastructure"
-
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
@@ -42,7 +41,7 @@ func (a *App) New(ctx context.Context) *App {
 	}
 	a.identityDb = identityDB
 
-	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 20, a.Logger)
+	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 40, a.Logger)
 	if err != nil {
 		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
 	}
@@ -53,23 +52,23 @@ func (a *App) New(ctx context.Context) *App {
 
 func (a *App) StartServer(ctx context.Context) error {
 	//const bufferSize = 60 * 1000 // Target RPS
-	const bufferSize = 1 // Target RPS
+	const bufferSize = 10000 // Target RPS
 
+	encodedUrlsProvider := infrastructure.EncodedUrlsPostgres{DB: a.mainDb}
 	saveEncodedUrls := infrastructure.ProcessChan(
 		a.Logger,
 		func(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
-			provider := encodeInfrastructure.EncodedUrlsPostgres{DB: a.mainDb}
-			return provider.SaveMany(ctx, encodedUrls)
+			return encodedUrlsProvider.SaveMany(ctx, encodedUrls)
 		},
 	)
 
-	identitiesBuffered, tokenIdentityProviderErrChan := encodeInfrastructure.NewIdentityProviderWithBuffer(ctx, &encodeInfrastructure.IdentitiesPostgres{DB: a.identityDb}, a.Logger, bufferSize)
+	identitiesBuffered, tokenIdentityProviderErrChan := infrastructure.NewIdentityProviderWithBuffer(ctx, &infrastructure.TokenKeysPostgres{DB: a.identityDb}, a.Logger, bufferSize)
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, bufferSize)
 	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, infrastructure.UrlParser{}, base58.Codec{}, a.Logger, urlWasEncodedChan)
 	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
-	decodeUrl := decode.NewDecodeFunc(a.Logger)
+	decodeUrl := decode.NewDecodeFunc(a.Logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, &encodedUrlsProvider)
 
 	mux := http.NewServeMux()
 

@@ -1,32 +1,54 @@
 package decode
 
 import (
-	"github.com/beard-programmer/shortorg/internal/base58"
+	"fmt"
+
+	"github.com/beard-programmer/shortorg/internal/core"
 )
 
 type DecodingRequest interface {
 	Url() string
 }
 
-type TokenKey = base58.IntegerExp5To6
-
 type ValidatedRequest struct {
-	TokenKey TokenKey
+	ShortUrl ShortUrl
+}
+
+func (ValidatedRequest) New(urlParser UrlParser, request DecodingRequest) (*ValidatedRequest, error) {
+	shortUrl, err := ShortUrl{}.new(urlParser, request.Url())
+	if err != nil {
+		return nil, err
+	}
+	return &ValidatedRequest{ShortUrl: *shortUrl}, nil
+
 }
 
 type ShortUrl struct {
-	Path  string
-	Token string
-	Host  string
+	KeyEncoded core.TokenKeyEncoded
+	Host       core.TokenHost
 }
 
-//      def self.from_uri(uri)
-//        path = uri.path
-//        to_token = SimpleTypes::StringExp5To6.from_string(uri.path[1..])
-//
-//        case [uri.scheme, uri.host, uri.domain, to_token.ok?]
-//        in ['http', STANDARD_HOST, String, true] | ['https', STANDARD_HOST, String, true] if 6 < path.size
-//          Result.ok new(path:, token: to_token.unwrap!.value)
-//        else Result.err 'Not a standard short url.'
-//        end
-//      end
+func (ShortUrl) new(urlParser UrlParser, url string) (*ShortUrl, error) {
+	uri, err := urlParser.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := uri.Scheme()
+	if scheme != "http" && scheme != "https" {
+		return nil, fmt.Errorf("invalid ShortUrl scheme: %s", scheme)
+	}
+	hostname := uri.Hostname()
+	tokenHost, err := core.TokenHostFromString(&hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	encodedKey, err := core.TokenKeyEncoded{}.New(uri.Path()[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return &ShortUrl{KeyEncoded: *encodedKey, Host: tokenHost}, nil
+
+}

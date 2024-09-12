@@ -4,20 +4,31 @@ import (
 	"context"
 
 	"github.com/beard-programmer/shortorg/internal/base58"
+	"github.com/beard-programmer/shortorg/internal/core"
 	"go.uber.org/zap"
 )
 
 type UrlWasDecoded struct {
+	Token core.TokenStandard
+}
+
+type OriginalUrlWasNotFound struct {
 }
 
 func NewDecodeFunc(
-
 	logger *zap.SugaredLogger,
-	// urlWasEncodedChan chan<- UrlWasEncoded,
-) func(context.Context, DecodingRequest) (*UrlWasDecoded, error) {
-	return func(ctx context.Context, r DecodingRequest) (*UrlWasDecoded, error) {
+	urlParser UrlParser,
+	codec Codec,
+	encodedUrlsProvider EncodedUrlsProvider,
+	// urlWasEncodedChan chan<- UrlWasDecoded,
+) func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error) {
+	return func(ctx context.Context, r DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error) {
 		return decode(
-			ctx, logger,
+			ctx,
+			logger,
+			urlParser,
+			codec,
+			encodedUrlsProvider,
 			//urlWasEncodedChan,
 			r,
 		)
@@ -28,31 +39,43 @@ type UnclaimedKey = base58.IntegerExp5To6
 
 func decode(
 	ctx context.Context,
-	logger *zap.SugaredLogger,
-	//urlWasEncodedChan chan<- UrlWasEncoded,
+	_ *zap.SugaredLogger,
+	urlParser UrlParser,
+	codec Codec,
+	encodedUrlsProvider EncodedUrlsProvider,
+	//_ chan<- UrlWasDecoded,
 	request DecodingRequest,
-) (*UrlWasDecoded, error) {
+) (*UrlWasDecoded, *OriginalUrlWasNotFound, error) {
+	validatedRequest, err := ValidatedRequest{}.New(urlParser, request)
+	if err != nil {
+		return nil, nil, err // validation
+	}
 
-	//      validate_request = RequestValidated.from_unvalidated_request(Infrastructure.method(:parse_url_string), request:)
-	//
-	//      to_token_identifier = validate_request.and_then do |validated_request|
-	//        UrlManagement::TokenIdentifier.from_string(Infrastructure.codec_base58.method(:decode),
-	//                                                   validated_request.short_url.token)
-	//      end
-	//
-	//      find_encoded_url = to_token_identifier.and_then do |token_identifier|
-	//        Infrastructure.find_encoded_url(db, token_identifier)
-	//      end
-	//      case find_encoded_url
-	//      in Result::Ok[encoded_url_string]
-	//        url = UrlManagement::OriginalUrl.from_string(Infrastructure.method(:parse_url_string),
-	//                                                     encoded_url_string).unwrap!.to_s
-	//        short_url = validate_request.unwrap!.short_url
-	//        Result.ok ShortUrlDecoded.new(url:, short_url_host: short_url.host, short_url_token: short_url.token)
-	//      in Result::Ok[] then Result.ok OriginalWasNotFound.new(request.short_url)
-	//      in Result::Err[Infrastructure::DatabaseError => e] then Result.err InfrastructureError.new(e)
-	//      in Result::Err[e] then Result.err ValidationError.new(e)
-	//      else raise "Unexpected response when fetching encoded url."
-	//      end
-	return &UrlWasDecoded{}, nil
+	shortUrl := validatedRequest.ShortUrl
+
+	tokenKey, err := shortUrl.KeyEncoded.Decode(codec)
+	if err != nil {
+		return nil, nil, err // vdaliton
+	}
+
+	url, err := encodedUrlsProvider.FindOne(ctx, *tokenKey)
+	if err != nil {
+		return nil, nil, err // inra
+	}
+	if url == "" {
+		return nil, &OriginalUrlWasNotFound{}, nil
+	}
+
+	originalUrl, err := core.OriginalURLFromString(UrlParserAdapter{urlParser}, url)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	token, err := core.NewToken(codec, *tokenKey, shortUrl.Host, *originalUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &UrlWasDecoded{*token}, nil, nil
 }

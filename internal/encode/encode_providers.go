@@ -6,7 +6,7 @@ import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type KeyIssuer interface {
+type TokenKeyStore interface {
 	Issue(ctx context.Context) (*core.TokenKey, error)
 }
 

@@ -12,15 +12,17 @@ type UrlWasEncoded struct {
 	Token core.TokenStandard
 }
 
-func NewEncodeFunc(
-	keyIssuer KeyIssuer,
+type Fn = func(context.Context, EncodingRequest) (*UrlWasEncoded, error)
+
+func NewEncodeFn(
+	tokenKeyStore TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
 	logger *zap.SugaredLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
-) func(context.Context, EncodingRequest) (*UrlWasEncoded, error) {
+) Fn {
 	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
-		return encode(ctx, keyIssuer, urlParser, codec, logger, urlWasEncodedChan, r)
+		return encode(ctx, tokenKeyStore, urlParser, codec, logger, urlWasEncodedChan, r)
 	}
 }
 
@@ -50,7 +52,7 @@ func (e ApplicationError) Error() string {
 
 func encode(
 	ctx context.Context,
-	keyIssuer KeyIssuer,
+	keyIssuer TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
 	logger *zap.SugaredLogger,

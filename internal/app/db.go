@@ -29,7 +29,7 @@ func ConnectDb(ctx context.Context, configFile, environment string, driver strin
 	db, err := sqlx.ConnectContext(ctx, driver, connStr)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to DB: %w", err)
+		return nil, fmt.Errorf("failed to connect to postgtesClient: %w", err)
 	}
 	db.SetMaxOpenConns(maxConnections)
 	db.SetMaxIdleConns(maxConnections)

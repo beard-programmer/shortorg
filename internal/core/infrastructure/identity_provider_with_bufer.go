@@ -18,7 +18,7 @@ func (e IdentityProviderWithBufferError) Error() string {
 }
 
 type IdentityProviderBulk interface {
-	GenerateMany(ctx context.Context, batchSize int) ([]*core.TokenKey, error)
+	IssueBatch(ctx context.Context, batchSize int) ([]*core.TokenKey, error)
 }
 
 type ProviderBulk interface {
@@ -29,16 +29,16 @@ type IdentityProviderWithBuffer struct {
 	provider     IdentityProviderBulk
 	logger       *zap.SugaredLogger
 	identityChan chan core.TokenKey
+	errChan      chan error
 }
 
 func NewIdentityProviderWithBuffer(ctx context.Context, provider IdentityProviderBulk, logger *zap.SugaredLogger, bufferSize int) (*IdentityProviderWithBuffer, <-chan error) {
+	errChan := make(chan error, 1)
 	producer := IdentityProviderWithBuffer{
 		provider:     provider,
 		logger:       logger,
 		identityChan: make(chan core.TokenKey, bufferSize),
 	}
-
-	errChan := make(chan error, 1)
 
 	producer.refillInfiniteLoop(ctx, errChan)
 
@@ -50,6 +50,8 @@ func (s *IdentityProviderWithBuffer) Issue(ctx context.Context) (*core.TokenKey,
 		select {
 		case ti := <-s.identityChan:
 			return &ti, nil
+		case err := <-s.errChan:
+			return nil, err
 		case <-time.After(10 * time.Millisecond):
 			s.logger.Warnln("10 milliseconds waiting for identity!")
 		case <-ctx.Done():
@@ -68,9 +70,9 @@ func (s *IdentityProviderWithBuffer) refillInfiniteLoop(ctx context.Context, err
 			case <-ticker.C:
 				freeCapacity := cap(s.identityChan) - len(s.identityChan)
 				if freeCapacity != 0 {
-					batch, err := s.provider.GenerateMany(ctx, freeCapacity)
+					batch, err := s.provider.IssueBatch(ctx, freeCapacity)
 					if err != nil {
-						errChan <- IdentityProviderWithBufferError{fmt.Errorf("refillInfiniteLoop error: %w", err)}
+						errChan <- IdentityProviderWithBufferError{fmt.Errorf("startInfiniteRefillBufferLoop error: %w", err)}
 						return
 					}
 					for _, ti := range batch {

@@ -12,6 +12,7 @@ import (
 	"github.com/beard-programmer/shortorg/internal/app"
 	"github.com/beard-programmer/shortorg/internal/base58"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
+	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgresClients"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
@@ -21,8 +22,9 @@ import (
 )
 
 type App struct {
-	encodedUrlsStorage infrastructure.EncodedUrlsStorage
-	tokenKeysStorage   infrastructure.TokenKeysPostgres
+	encodedUrlsStorage *infrastructure.EncodedUrlStore
+	tokenKeysStorage   *infrastructure.TokenKeyStore
+	postgresClients    *postgresClients.Clients
 	Logger             *zap.SugaredLogger
 }
 
@@ -39,16 +41,16 @@ func (a *App) New(ctx context.Context) *App {
 	driver := app.RegisterSqlLogger(a.Logger)
 	identityDB, err := app.ConnectDb(ctx, "identity_db.json", environment, driver, 4, a.Logger)
 	if err != nil {
-		a.Logger.Fatalf("Failed to connect to identity DB: %v", err)
+		a.Logger.Fatalf("Failed to connect to identity postgtesClient: %v", err)
 	}
-	a.tokenKeysStorage = infrastructure.TokenKeysPostgres{DB: identityDB}
+	a.tokenKeysStorage = infrastructure.TokenKeyStore{postgtesClient: identityDB}
 
 	mainDB, err := app.ConnectDb(ctx, "db.json", environment, driver, 40, a.Logger)
 	if err != nil {
-		a.Logger.Fatalf("Failed to connect to main DB: %v", err)
+		a.Logger.Fatalf("Failed to connect to main postgtesClient: %v", err)
 	}
 
-	encodedUrlsStore, err := infrastructure.EncodedUrlsStorage{}.New(mainDB, nil)
+	encodedUrlsStore, err := infrastructure.EncodedUrlStore{}.New(mainDB, nil)
 	if err != nil {
 		a.Logger.Fatalf("Failed to set encodedUrlsStore: %v", err)
 	}
@@ -59,8 +61,8 @@ func (a *App) New(ctx context.Context) *App {
 }
 
 func (a *App) StartServer(ctx context.Context) error {
-	//const bufferSize = 60 * 1000 // Target RPS
-	const bufferSize = 1000 // Target RPS
+	//const bufferSize = 60 * 1000 //
+	const bufferSize = 1000 //
 
 	saveEncodedUrls := infrastructure.ProcessChan(
 		a.Logger,
@@ -72,10 +74,10 @@ func (a *App) StartServer(ctx context.Context) error {
 	identitiesBuffered, tokenIdentityProviderErrChan := infrastructure.NewIdentityProviderWithBuffer(ctx, &a.tokenKeysStorage, a.Logger, bufferSize)
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, bufferSize)
-	encodeUrl := encode.NewEncodeFunc(identitiesBuffered, infrastructure.UrlParser{}, base58.Codec{}, a.Logger, urlWasEncodedChan)
+	encodeUrl := encode.NewEncodeFn(identitiesBuffered, infrastructure.UrlParser{}, base58.Codec{}, a.Logger, urlWasEncodedChan)
 	saveEncodedUrlsErrChan := saveEncodedUrls(ctx, bufferSize, 1, 250*time.Millisecond, urlWasEncodedChan)
 
-	decodeUrl := decode.NewDecodeFunc(a.Logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, &a.encodedUrlsStorage)
+	decodeUrl := decode.NewDecodeFn(a.Logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, &a.encodedUrlsStorage)
 
 	mux := http.NewServeMux()
 

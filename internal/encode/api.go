@@ -89,7 +89,7 @@ func handleError(w http.ResponseWriter, err error) {
 }
 
 //
-//func ApiHandler(identityProvider KeyIssuer, urlProvider UrlParser, logger *zap.SugaredLogger, encodedUrlChan chan<- EncodedUrl) http.HandlerFunc {
+//func ApiHandler(identityProvider TokenKeyStore, urlProvider UrlParser, logger *zap.SugaredLogger, encodedUrlChan chan<- EncodedUrl) http.HandlerFunc {
 //	return func(w http.ResponseWriter, r *http.EncodingRequest) {
 //		var req APIRequest
 //		err := json.NewDecoder(r.Body).Decode(&req)

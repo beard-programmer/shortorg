@@ -15,13 +15,15 @@ type UrlWasDecoded struct {
 type OriginalUrlWasNotFound struct {
 }
 
-func NewDecodeFunc(
+type Fn = func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error)
+
+func NewDecodeFn(
 	logger *zap.SugaredLogger,
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,
 	// urlWasEncodedChan chan<- UrlWasDecoded,
-) func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error) {
+) Fn {
 	return func(ctx context.Context, r DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error) {
 		return decode(
 			ctx,

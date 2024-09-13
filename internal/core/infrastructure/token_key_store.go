@@ -42,6 +42,7 @@ func NewTokenKeyStore(ctx context.Context, postgresClient *sqlx.DB, logger *zap.
 func (s *TokenKeyStore) Issue(ctx context.Context) (*core.TokenKey, error) {
 	const longAwaitDuration = 10 * time.Millisecond
 	ticker := time.NewTicker(longAwaitDuration)
+	// TODO: timeout
 	for {
 		select {
 		case ti := <-s.bufferChan:

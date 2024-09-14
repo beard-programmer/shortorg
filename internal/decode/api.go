@@ -27,47 +27,45 @@ type APIErrResponse struct {
 	Message string `json:"message"`
 }
 
-func HttpHandler(
+func HttpHandlerFunc(
 	logger *zap.Logger,
 	decodeFunc func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error),
-) http.Handler {
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			var apiRequest APIRequest
-			err := json.NewDecoder(r.Body).Decode(&apiRequest)
-			if err != nil {
-				handleError(w, fmt.Errorf("invalid request body"))
-				return
-			}
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var apiRequest APIRequest
+		err := json.NewDecoder(r.Body).Decode(&apiRequest)
+		if err != nil {
+			handleError(w, fmt.Errorf("invalid request body"))
+			return
+		}
 
-			urlWasDecoded, originalWasNotFound, err := decodeFunc(r.Context(), apiRequest)
+		urlWasDecoded, originalWasNotFound, err := decodeFunc(r.Context(), apiRequest)
 
-			if err != nil {
-				handleError(w, err)
-				return
-			}
-			if originalWasNotFound != nil {
-				var apiErr APIErrResponse
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				apiErr = APIErrResponse{Code: "originalWasNotFound", Message: ""}
-				if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-					http.Error(w, "Failed to write error response", http.StatusInternalServerError)
-				}
-				return
-			}
-
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if originalWasNotFound != nil {
+			var apiErr APIErrResponse
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			response := APIResponse{
-				OriginalURL: urlWasDecoded.Token.OriginalURL.String(),
-				ShortURL:    fmt.Sprintf("https://%s/%s", urlWasDecoded.Token.Host.Hostname(), urlWasDecoded.Token.KeyEncoded.Value()),
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			apiErr = APIErrResponse{Code: "originalWasNotFound", Message: ""}
+			if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+				http.Error(w, "Failed to write error response", http.StatusInternalServerError)
 			}
-			if err := json.NewEncoder(w).Encode(response); err != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-			}
-		},
-	)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		response := APIResponse{
+			OriginalURL: urlWasDecoded.Token.OriginalURL.String(),
+			ShortURL:    fmt.Sprintf("https://%s/%s", urlWasDecoded.Token.Host.Hostname(), urlWasDecoded.Token.KeyEncoded.Value()),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		}
+	}
 }
 
 func handleError(w http.ResponseWriter, err error) {

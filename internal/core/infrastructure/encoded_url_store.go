@@ -23,15 +23,15 @@ func (e EncodedUrlProviderPostgresError) Error() string {
 
 type EncodedUrlStore struct {
 	postgresClient *sqlx.DB
-	cache          cache
+	cache          Cache
 }
 
-type cache interface {
+type Cache interface {
 	Get(context.Context, any) (string, error)
 	Set(context.Context, any, string) error
 }
 
-func NewEncodedUrlStore(db *sqlx.DB, c cache) (*EncodedUrlStore, error) {
+func NewEncodedUrlStore(db *sqlx.DB, c Cache) (*EncodedUrlStore, error) {
 	if db == nil {
 		return nil, errors.New("postgresClient is nil")
 	}

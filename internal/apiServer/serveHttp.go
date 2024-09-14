@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -12,20 +13,17 @@ import (
 )
 
 func (s *Server) serveHTTP(ctx context.Context) error {
-	mux := http.NewServeMux()
 
-	gatewayMux, err := s.getServerMux(ctx)
+	serverMux, err := s.getServerMux(ctx)
 	if err != nil {
 		return fmt.Errorf("create http server mux: %w", err)
 	}
 
-	mux.Handle("/", gatewayMux)
-
 	httpServer := &http.Server{
-		Addr:         s.config.Host + ":" + strconv.Itoa(s.config.HTTP.InternalPort),
-		Handler:      s.wrapWithDefaultMiddlewares(mux),
-		ReadTimeout:  60 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		Addr:         fmt.Sprintf("%s:%s", s.config.Host, strconv.Itoa(s.config.HTTP.InternalPort)),
+		Handler:      serverMux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
 
 	go func() {
@@ -49,7 +47,7 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 		s.logger(ctx).Info("successfully shut down http server")
 	}()
 
-	s.logger(ctx).Info("starting http-server", zap.String("addr", httpServer.Addr))
+	s.logger(ctx).Info("starting http-server", zap.String("addr", httpServer.Addr), zap.Int("concurrency", runtime.GOMAXPROCS(0)))
 
 	err = httpServer.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -1,3 +1,9 @@
+concurrency = 2
+encoded_urls_queue_size = 10000
+use_cache = false
+debug = true
+env = "development"
+
 [api_server]
 host = "localhost"
 
@@ -25,7 +31,3 @@ max_idle_connections = 40
 [cache]
 max_number_of_elements = 100000
 max_mb_size = 512
-
-encoded_urls_queue_size = 10000
-debug = true
-env = "development"

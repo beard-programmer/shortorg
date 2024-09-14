@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	ekoCache "github.com/eko/gocache/lib/v4/cache"
@@ -32,4 +33,14 @@ func (c *InMemory[T]) Get(ctx context.Context, key any) (T, error) {
 
 func (c *InMemory[T]) Set(ctx context.Context, key any, value T) error {
 	return c.cacheManager.Set(ctx, key, value)
+}
+
+type MockCache[T any] struct{}
+
+func (m *MockCache[T]) Get(_ context.Context, key any) (T, error) {
+	return *new(T), fmt.Errorf("not found in MOCK cache %v", key)
+}
+
+func (m *MockCache[T]) Set(_ context.Context, _ any, _ T) error {
+	return nil
 }

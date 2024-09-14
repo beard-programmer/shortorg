@@ -18,7 +18,7 @@ import (
 type App struct {
 	logger               *zap.Logger
 	postgresClients      *postgresClients.Clients
-	cache                *cache.InMemory[string]
+	cache                infrastructure.Cache
 	encodedUrlStore      *infrastructure.EncodedUrlStore
 	tokenKeyStore        *infrastructure.TokenKeyStore
 	urlWasEncodedChan    chan encode.UrlWasEncoded
@@ -37,12 +37,14 @@ func (App) Name() string {
 }
 
 type Config struct {
-	ApiServerConfig       apiServer.Config              `toml:"api_server" envconfig:"API_SERVER"`
-	PostgresClientsConfig postgresClients.ClientsConfig `toml:"postgres_clients" envconfig:"POSTGRES_CLIENTS"`
-	CacheConfig           cache.Config                  `toml:"cache" envconfig:"CACHE"`
+	UseCache              bool                          `toml:"use_cache" envconfig:"USE_CACHE"`
+	Concurrency           int                           `toml:"concurrency" envconfig:"GOMAXPROCS" default:"2"`
 	EncodedUrlsQueSize    int64                         `toml:"encoded_urls_queue_size" envconfig:"ENCODED_URLS_QUEUE_SIZE" default:"1000"`
 	Debug                 bool                          `toml:"debug" envconfig:"DEBUG" default:"false"`
 	ENV                   string                        `toml:"env" envconfig:"ENV" default:"development"`
+	ApiServerConfig       apiServer.Config              `toml:"api_server" envconfig:"API_SERVER"`
+	PostgresClientsConfig postgresClients.ClientsConfig `toml:"postgres_clients" envconfig:"POSTGRES_CLIENTS"`
+	CacheConfig           cache.Config                  `toml:"cache" envconfig:"CACHE"`
 }
 
 func (c Config) IsProdEnv() bool {

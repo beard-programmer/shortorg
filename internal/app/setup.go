@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -22,11 +23,8 @@ func (app *App) Setup(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("setup config: %w", err)
 	}
-	//
-	//err = app.setupContextUtils(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("setup context utils: %w", err)
-	//}
+
+	_ = runtime.GOMAXPROCS(app.config.Concurrency)
 
 	err = app.setupPostgresClients(ctx)
 	if err != nil {
@@ -77,6 +75,8 @@ func (app *App) setupConfig(ctx context.Context) error {
 
 	if envConfig.IsProdEnv() {
 		config = envConfig
+	} else {
+		app.logger.Sugar().Infow("Configs set up", "config", config)
 	}
 
 	app.config = config
@@ -95,6 +95,11 @@ func (app *App) setupPostgresClients(ctx context.Context) error {
 }
 
 func (app *App) setupCache(ctx context.Context) error {
+	if !app.config.UseCache {
+		app.cache = &cache.MockCache[string]{}
+		return nil
+	}
+
 	inMemory, err := cache.NewInMemory[string](app.config.CacheConfig)
 	if err != nil {
 		return fmt.Errorf("setupCache: %w", err)

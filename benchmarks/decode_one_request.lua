@@ -33,5 +33,5 @@ request = function()
     local body = '{"short_url": "https://shortl.org/2E1Moa"}'
 
     -- Return the HTTP request to be sent
-    return wrk.format("POST", "/decode", {["Content-Type"] = "application/json"}, body)
+    return wrk.format("POST", "/api/decode", {["Content-Type"] = "application/json"}, body)
 end

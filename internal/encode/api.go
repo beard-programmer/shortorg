@@ -32,37 +32,35 @@ type APIErrResponse struct {
 	Message string `json:"message"`
 }
 
-func HttpHandler(
+func HttpHandlerFunc(
 	logger *zap.Logger,
 	encodeFunc func(context.Context, EncodingRequest) (*UrlWasEncoded, error),
-) http.Handler {
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			var apiRequest APIRequest
-			err := json.NewDecoder(r.Body).Decode(&apiRequest)
-			if err != nil {
-				handleError(w, ValidationError{Err: fmt.Errorf("invalid request body")})
-				return
-			}
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var apiRequest APIRequest
+		err := json.NewDecoder(r.Body).Decode(&apiRequest)
+		if err != nil {
+			handleError(w, ValidationError{Err: fmt.Errorf("invalid request body")})
+			return
+		}
 
-			urlWasEncoded, err := encodeFunc(r.Context(), apiRequest)
+		urlWasEncoded, err := encodeFunc(r.Context(), apiRequest)
 
-			if err != nil {
-				handleError(w, err)
-				return
-			}
+		if err != nil {
+			handleError(w, err)
+			return
+		}
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			response := APIResponse{
-				URL:      urlWasEncoded.Token.OriginalURL.String(),
-				ShortURL: fmt.Sprintf("https://%s/%s", urlWasEncoded.Token.Host.Hostname(), urlWasEncoded.Token.KeyEncoded.Value()),
-			}
-			if err := json.NewEncoder(w).Encode(response); err != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-			}
-		},
-	)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		response := APIResponse{
+			URL:      urlWasEncoded.Token.OriginalURL.String(),
+			ShortURL: fmt.Sprintf("https://%s/%s", urlWasEncoded.Token.Host.Hostname(), urlWasEncoded.Token.KeyEncoded.Value()),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		}
+	}
 }
 
 func handleError(w http.ResponseWriter, err error) {

@@ -33,7 +33,7 @@ type APIErrResponse struct {
 }
 
 func HttpHandler(
-	logger *zap.SugaredLogger,
+	logger *zap.Logger,
 	encodeFunc func(context.Context, EncodingRequest) (*UrlWasEncoded, error),
 ) http.Handler {
 	return http.HandlerFunc(

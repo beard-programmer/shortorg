@@ -38,28 +38,6 @@ func NewEncodedUrlStore(db *sqlx.DB, c cache) (*EncodedUrlStore, error) {
 	return &EncodedUrlStore{db, c}, nil
 }
 
-//
-//func (EncodedUrlStore) New(postgresClient *sqlx.postgresClient, cacheConfig *ristretto.Config) (*EncodedUrlStore, error) {
-//	if postgresClient == nil {
-//		return nil, errors.New("postgresClient is nil")
-//	}
-//
-//	if cacheConfig == nil {
-//		cacheConfig = &ristretto.Config{
-//			NumCounters: 100000, // number of keys to track frequency of (100k).
-//			MaxCost:     1 << 30,
-//			BufferItems: 64, // number of keys per Get buffer.
-//		}
-//	}
-//
-//	cache, err := newEncodedUrlsCache(*cacheConfig)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &EncodedUrlStore{postgresClient, cache}, nil
-//}
-
 type EncodedUrl struct {
 	TokenIdentifier int64  `db:"token_identifier"`
 	Url             string `db:"url"`

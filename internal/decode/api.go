@@ -28,7 +28,7 @@ type APIErrResponse struct {
 }
 
 func HttpHandler(
-	logger *zap.SugaredLogger,
+	logger *zap.Logger,
 	decodeFunc func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error),
 ) http.Handler {
 	return http.HandlerFunc(

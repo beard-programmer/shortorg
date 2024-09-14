@@ -18,7 +18,7 @@ type OriginalUrlWasNotFound struct {
 type Fn = func(context.Context, DecodingRequest) (*UrlWasDecoded, *OriginalUrlWasNotFound, error)
 
 func NewDecodeFn(
-	logger *zap.SugaredLogger,
+	logger *zap.Logger,
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,
@@ -41,7 +41,7 @@ type UnclaimedKey = base58.IntegerExp5To6
 
 func decode(
 	ctx context.Context,
-	_ *zap.SugaredLogger,
+	_ *zap.Logger,
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,

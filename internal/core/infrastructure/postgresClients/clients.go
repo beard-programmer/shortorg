@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/qustavo/sqlhooks/v2"
@@ -42,7 +43,7 @@ func New(
 		return nil, fmt.Errorf("error creating token identity client: %w", err)
 	}
 
-	return &Clients{shortOrgClient, tokenIdentityClient}, nil
+	return &Clients{tokenIdentityClient, shortOrgClient}, nil
 }
 
 func newPostgresClient(ctx context.Context, logger *zap.Logger, cfg Config, registeredSqlHook sqlHook, appName string, _ bool) (*sqlx.DB, error) {
@@ -56,7 +57,7 @@ func newPostgresClient(ctx context.Context, logger *zap.Logger, cfg Config, regi
 	}
 	logger.Info("Successfully connected to database", zap.String("database", cfg.DBName))
 	db.SetMaxOpenConns(cfg.MaxConnections)
-	db.SetMaxIdleConns(cfg.MaxIddleConnections)
+	db.SetMaxIdleConns(cfg.MaxIdleConnections)
 
 	migrationDB, err := sql.Open(registeredSqlHook.driverName(), connStr)
 	if err != nil {
@@ -70,7 +71,7 @@ func newPostgresClient(ctx context.Context, logger *zap.Logger, cfg Config, regi
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", cfg.MigrationsPath), cfg.DBName, instance,
+		fmt.Sprintf("file://migrations/%s", cfg.DBName), cfg.DBName, instance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize migrations: %w", err)
@@ -122,7 +123,7 @@ func (h *sqlHook) After(ctx context.Context, query string, args ...interface{}) 
 
 	duration := time.Since(startTime)
 
-	if 10*time.Millisecond < duration {
+	if 100*time.Millisecond < duration {
 		h.logger.Warnln("Sql query took longer than 10ms",
 			"query", query,
 			"args", args,

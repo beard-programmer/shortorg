@@ -9,9 +9,14 @@ import (
 )
 
 func ProcessChan[T any](
-	logger *zap.SugaredLogger, processBatch func(context.Context, []T) error, // Dependencies
-) func(ctx context.Context, batchSize int, concurrency int, ticketDuration time.Duration, TChan <-chan T) <-chan error {
-	return func(ctx context.Context, batchSize int, concurrency int, tickerDuration time.Duration, TChan <-chan T) <-chan error {
+	logger *zap.SugaredLogger,
+	processBatch func(context.Context, []T) error,
+	batchSize int,
+	concurrency int,
+	tickerDuration time.Duration,
+	TChan <-chan T,
+) func(ctx context.Context) <-chan error {
+	return func(ctx context.Context) <-chan error {
 
 		errChan := make(chan error, concurrency+1)
 

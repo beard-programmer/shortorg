@@ -18,7 +18,7 @@ func NewEncodeFn(
 	tokenKeyStore TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
-	logger *zap.SugaredLogger,
+	logger *zap.Logger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 ) Fn {
 	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
@@ -55,7 +55,7 @@ func encode(
 	keyIssuer TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
-	logger *zap.SugaredLogger,
+	logger *zap.Logger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 	request EncodingRequest,
 ) (*UrlWasEncoded, error) {

@@ -1,23 +1,31 @@
 package app
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/beard-programmer/shortorg/internal/apiServer"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgresClients"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
+	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
+
 	"go.uber.org/zap"
 )
 
 type App struct {
-	logger          *zap.Logger
-	postgresClients *postgresClients.Clients
-	cache           *cache.InMemory[string]
-	encodedUrlStore *infrastructure.EncodedUrlStore
-	tokenKeyStore   *infrastructure.TokenKeyStore
-	encodeFn        encode.Fn
-	decodeFn        decode.Fn
-	config          Config
+	logger               *zap.Logger
+	postgresClients      *postgresClients.Clients
+	cache                *cache.InMemory[string]
+	encodedUrlStore      *infrastructure.EncodedUrlStore
+	tokenKeyStore        *infrastructure.TokenKeyStore
+	urlWasEncodedChan    chan encode.UrlWasEncoded
+	encodeFn             encode.Fn
+	decodeFn             decode.Fn
+	urlWasEncodedHandler encodeInfrastructure.UrlWasEncodedHandlerFn
+	config               Config
 }
 
 func New(l *zap.Logger) *App {
@@ -29,17 +37,32 @@ func (App) Name() string {
 }
 
 type Config struct {
-	//Vault             vault.VaultConfig     `envconfig:"VAULT"`
-	//Server            apiServer.Config      `envconfig:"SERVER"`
-	//ElasticClients    elasticClients.Config `envconfig:"ELASTIC_CLIENTS"`
-	//Tracer            tracer.Config         `envconfig:"TRACER"`
-	//ElasticRepository repository.Config     `envconfig:"ELASTIC_REPO"`
-	postgresClientsConfig postgresClients.ClientsConfig
-	cacheConfig           cache.Config
-	Debug                 bool   `envconfig:"IS_DEBUG"`
-	ENV                   string `envconfig:"ENV" default:"dev"`
+	ApiServerConfig       apiServer.Config              `toml:"api_server" envconfig:"API_SERVER"`
+	PostgresClientsConfig postgresClients.ClientsConfig `toml:"postgres_clients" envconfig:"POSTGRES_CLIENTS"`
+	CacheConfig           cache.Config                  `toml:"cache" envconfig:"CACHE"`
+	EncodedUrlsQueSize    int64                         `toml:"encoded_urls_queue_size" envconfig:"ENCODED_URLS_QUEUE_SIZE" default:"1000"`
+	Debug                 bool                          `toml:"debug" envconfig:"DEBUG" default:"false"`
+	ENV                   string                        `toml:"env" envconfig:"ENV" default:"development"`
 }
 
 func (c Config) IsProdEnv() bool {
 	return c.ENV == "production"
+}
+
+func (app *App) Serve(ctx context.Context) error {
+	api := apiServer.New(
+		app.encodeFn,
+		app.decodeFn,
+		app.urlWasEncodedHandler,
+		app.logger,
+		app.config.ApiServerConfig,
+		app.Name(),
+	)
+
+	err := api.Serve(ctx)
+	if err != nil {
+		return fmt.Errorf("api server: %w", err)
+	}
+
+	return nil
 }

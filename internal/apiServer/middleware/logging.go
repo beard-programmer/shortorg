@@ -1,4 +1,4 @@
-package app
+package middleware
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func LoggingMiddleware(logger *zap.SugaredLogger, next http.Handler) http.Handler {
+func LoggingMiddleware(logger *zap.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -16,14 +16,14 @@ func LoggingMiddleware(logger *zap.SugaredLogger, next http.Handler) http.Handle
 
 		if 500 <= wrappedWriter.statusCode {
 			duration := time.Since(start)
-			logger.Infof("%s - - \"%s %s %s\" %d  \"%s\" %.3fms",
-				r.RemoteAddr,
-				r.Method,
-				r.URL.String(),
-				r.Proto,
-				wrappedWriter.statusCode,
-				r.UserAgent(),
-				duration.Seconds()*1000,
+			logger.Info("HTTP request",
+				zap.String("remote_addr", r.RemoteAddr),
+				zap.String("method", r.Method),
+				zap.String("url", r.URL.String()),
+				zap.String("proto", r.Proto),
+				zap.Int("status_code", wrappedWriter.statusCode),
+				zap.String("user_agent", r.UserAgent()),
+				zap.Float64("duration_ms", duration.Seconds()*1000),
 			)
 		}
 	})

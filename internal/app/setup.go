@@ -3,25 +3,32 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/BurntSushi/toml"
+	"github.com/beard-programmer/shortorg/internal/base58"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgresClients"
+	"github.com/beard-programmer/shortorg/internal/decode"
+	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
+	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
+	"github.com/kelseyhightower/envconfig"
 )
 
 func (app *App) Setup(ctx context.Context) error {
-	//err := app.setupConfig(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("setup config: %w", err)
-	//}
+	err := app.setupConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("setup config: %w", err)
+	}
 	//
 	//err = app.setupContextUtils(ctx)
 	//if err != nil {
 	//	return fmt.Errorf("setup context utils: %w", err)
 	//}
 
-	err := app.setupPostgresClients(ctx)
+	err = app.setupPostgresClients(ctx)
 	if err != nil {
 		return fmt.Errorf("setup postgres clients: %w", err)
 	}
@@ -46,36 +53,45 @@ func (app *App) Setup(ctx context.Context) error {
 		return fmt.Errorf("setup use cases: %w", err)
 	}
 
+	err = app.setupEventHandlers(ctx)
+	if err != nil {
+		return fmt.Errorf("setup event handlers: %w", err)
+	}
+
 	return nil
 }
 
-//
-//func (app *App) setupConfig(ctx context.Context) error {
-//	var err error
-//
-//	app.config, err = config.ParseConfig(ctx)
-//	if err != nil {
-//		return fmt.Errorf("parse config: %w", err)
-//	}
-//
-//	vaultInitCtx, vaultInitCtxCancel := context.WithTimeout(ctx, time.Minute)
-//	defer vaultInitCtxCancel()
-//
-//	vaultClient, err := vault.NewVaultConfigSource(vaultInitCtx, app.logger, app.config.Vault, app.config.ENV)
-//	if err != nil {
-//		return fmt.Errorf("create vault client: %w", err)
-//	}
-//
-//	err = config.FillFieldsFromSource(ctx, app.config, vaultClient)
-//	if err != nil {
-//		return fmt.Errorf("fetch config: %w", err)
-//	}
-//
-//	return nil
-//}
+func (app *App) setupConfig(ctx context.Context) error {
+	var config Config
+
+	_, err := toml.DecodeFile("./config/config.dev.toml", &config)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %w", err)
+	}
+
+	var envConfig Config
+	err = envconfig.Process("", &envConfig)
+	if err != nil {
+		return fmt.Errorf("error processing environment variables: %w", err)
+	}
+
+	if envConfig.IsProdEnv() {
+		config = envConfig
+	}
+
+	//// 3. Validate the configuration
+	//err = validateConfig(&config)
+	//if err != nil {
+	//	return nil, fmt.Errorf("configuration validation error: %w", err)
+	//}
+
+	app.config = config
+
+	return nil
+}
 
 func (app *App) setupPostgresClients(ctx context.Context) error {
-	clients, err := postgresClients.New(ctx, app.logger, app.config.postgresClientsConfig, app.Name(), app.config.IsProdEnv())
+	clients, err := postgresClients.New(ctx, app.logger, app.config.PostgresClientsConfig, app.Name(), app.config.IsProdEnv())
 	if err != nil {
 		return fmt.Errorf("setupPostgresClients: %w", err)
 	}
@@ -85,7 +101,7 @@ func (app *App) setupPostgresClients(ctx context.Context) error {
 }
 
 func (app *App) setupCache(ctx context.Context) error {
-	inMemory, err := cache.NewInMemory[string](app.config.cacheConfig)
+	inMemory, err := cache.NewInMemory[string](app.config.CacheConfig)
 	if err != nil {
 		return fmt.Errorf("setupCache: %w", err)
 	}
@@ -113,13 +129,13 @@ func (app *App) setupTokenKeyStore(ctx context.Context) error {
 }
 
 func (app *App) setupUseCaseFns(ctx context.Context) error {
-	encodeFn := encode.NewEncodeFn()
+	app.urlWasEncodedChan = make(chan encode.UrlWasEncoded, app.config.EncodedUrlsQueSize)
+	app.encodeFn = encode.NewEncodeFn(app.tokenKeyStore, infrastructure.UrlParser{}, base58.Codec{}, app.logger, app.urlWasEncodedChan)
+	app.decodeFn = decode.NewDecodeFn(app.logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, app.encodedUrlStore)
 	return nil
 }
 
-//
-//func (app *App) setupContextUtils(_ context.Context) error {
-//	app.contextUtils = contextUtils.New()
-//
-//	return nil
-//}
+func (app *App) setupEventHandlers(ctx context.Context) error {
+	app.urlWasEncodedHandler = encodeInfrastructure.NewUrlWasEncodedHandler(app.logger, app.encodedUrlStore, 10000, 1, 250*time.Millisecond, app.urlWasEncodedChan)
+	return nil
+}

@@ -35,56 +35,51 @@ func NewTokenKeyStore(ctx context.Context, postgresClient *sqlx.DB, logger *zap.
 	store := TokenKeyStore{
 		postgresClient, logger, bufferChan, errChan,
 	}
-	store.startInfiniteRefillBufferLoop(ctx)
+	go store.bufferRefillInfiniteLoop(ctx)
 	return &store, nil
 }
 
 func (s *TokenKeyStore) Issue(ctx context.Context) (*core.TokenKey, error) {
-	const longAwaitDuration = 10 * time.Millisecond
-	ticker := time.NewTicker(longAwaitDuration)
-	// TODO: timeout
+	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	defer cancel()
+
 	for {
 		select {
 		case ti := <-s.bufferChan:
-			ticker.Reset(longAwaitDuration)
 			return &ti, nil
 		case err := <-s.errChan:
 			return nil, fmt.Errorf("issue: %w", err)
-		case <-ticker.C:
-			s.logger.Warn("10 milliseconds waiting for identity!")
 		case <-ctx.Done():
 			return nil, fmt.Errorf("issue: %w", ctx.Err())
 		}
 	}
 }
 
-func (s *TokenKeyStore) startInfiniteRefillBufferLoop(ctx context.Context) {
+func (s *TokenKeyStore) bufferRefillInfiniteLoop(ctx context.Context) {
 	const targetRps = 100000
 	refillFrequency := time.Duration(1+cap(s.bufferChan)*1000/targetRps) * time.Millisecond
-	go func() {
-		ticker := time.NewTicker(refillFrequency)
+	ticker := time.NewTicker(refillFrequency)
 
-		for {
-			select {
-			case <-ticker.C:
-				freeCapacity := cap(s.bufferChan) - len(s.bufferChan)
-				if freeCapacity != 0 {
-					batch, err := s.issueBatch(ctx, freeCapacity)
-					if err != nil {
-						s.errChan <- IdentityProviderWithBufferError{fmt.Errorf("startInfiniteRefillBufferLoop error: %w", err)}
-						return
-					}
-					for _, ti := range batch {
-						s.bufferChan <- *ti
-					}
-					ticker.Reset(refillFrequency)
+	for {
+		select {
+		case <-ticker.C:
+			freeCapacity := cap(s.bufferChan) - len(s.bufferChan)
+			if freeCapacity != 0 {
+				batch, err := s.issueBatch(ctx, freeCapacity)
+				if err != nil {
+					s.errChan <- fmt.Errorf("bufferRefillInfiniteLoop error: %w", err)
+					return
 				}
-			case <-ctx.Done():
-				s.errChan <- ctx.Err()
-				return
+				for _, ti := range batch {
+					s.bufferChan <- *ti
+				}
+				ticker.Reset(refillFrequency)
 			}
+		case <-ctx.Done():
+			s.errChan <- ctx.Err()
+			return
 		}
-	}()
+	}
 }
 
 func (p *TokenKeyStore) issueBatch(ctx context.Context, batchSize int) ([]*core.TokenKey, error) {

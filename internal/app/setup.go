@@ -79,12 +79,6 @@ func (app *App) setupConfig(ctx context.Context) error {
 		config = envConfig
 	}
 
-	//// 3. Validate the configuration
-	//err = validateConfig(&config)
-	//if err != nil {
-	//	return nil, fmt.Errorf("configuration validation error: %w", err)
-	//}
-
 	app.config = config
 
 	return nil

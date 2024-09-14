@@ -47,28 +47,31 @@ func (e EncodedUrl) OriginalUrl() string {
 	return e.Url
 }
 
-func (s *EncodedUrlStore) FindOne(ctx context.Context, key core.TokenKey) (string, error) {
-	var url string
+func (s *EncodedUrlStore) FindOne(ctx context.Context, key core.TokenKey) (string, bool, error) {
+	var (
+		url string
+		err error
+	)
 
-	url, notFound := s.cache.Get(ctx, key.Value())
-	if notFound == nil {
-		return url, nil
+	url, err = s.cache.Get(ctx, key.Value())
+	if nil == err {
+		return url, true, err
 	}
 
 	row := s.postgresClient.QueryRowxContext(ctx, "SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1", key.Value())
-	err := row.Scan(&url)
+	err = row.Scan(&url)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
+		return url, false, nil
 	}
 	if err != nil {
-		return "", EncodedUrlProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
+		return url, false, EncodedUrlProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
 	}
 
-	err = s.cache.Set(ctx, key.Value(), url)
-	if err != nil {
+	setCacheErr := s.cache.Set(ctx, key.Value(), url)
+	if setCacheErr != nil {
 		fmt.Printf("FindOne: Error storing in cache key %v value %v", key, url)
 	}
-	return url, nil
+	return url, true, err
 }
 
 func (s *EncodedUrlStore) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {

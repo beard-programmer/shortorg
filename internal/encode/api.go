@@ -1,11 +1,11 @@
 package encode
 
 import (
-	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/beard-programmer/shortorg/internal/httpApi"
 	"go.uber.org/zap"
 )
 
@@ -28,98 +28,54 @@ type APIResponse struct {
 }
 
 type APIErrResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	httpStatusCode int
+	Code           string `json:"code"`
+	Message        string `json:"message"`
 }
 
 func HttpHandlerFunc(
 	logger *zap.Logger,
-	encodeFunc func(context.Context, EncodingRequest) (*UrlWasEncoded, error),
+	encodeFunc Fn,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var apiRequest APIRequest
-		err := json.NewDecoder(r.Body).Decode(&apiRequest)
+		apiRequest, err := httpApi.DecodeRequest[APIRequest](r)
 		if err != nil {
-			handleError(w, ValidationError{Err: fmt.Errorf("invalid request body")})
+			handleError(w, r, ValidationError{Err: fmt.Errorf("invalid request body")})
 			return
 		}
 
 		urlWasEncoded, err := encodeFunc(r.Context(), apiRequest)
 
 		if err != nil {
-			handleError(w, err)
+			handleError(w, r, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		response := APIResponse{
 			URL:      urlWasEncoded.Token.OriginalURL.String(),
 			ShortURL: fmt.Sprintf("https://%s/%s", urlWasEncoded.Token.Host.Hostname(), urlWasEncoded.Token.KeyEncoded.Value()),
 		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "Failed to write response", http.StatusInternalServerError)
-		}
+		httpApi.EncodeResponse(w, r, http.StatusOK, response)
 	}
 }
 
-func handleError(w http.ResponseWriter, err error) {
+func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	var apiErr APIErrResponse
 
-	// TODO: fix
-	switch e := err.(type) {
-	case ValidationError:
-		w.WriteHeader(http.StatusBadRequest)
-		apiErr = APIErrResponse{Code: "ValidationError", Message: e.Error()}
-	case InfrastructureError:
-		w.WriteHeader(http.StatusInternalServerError)
-		apiErr = APIErrResponse{Code: "InfrastructureError", Message: e.Error()}
-	case ApplicationError:
-		w.WriteHeader(http.StatusInternalServerError)
-		apiErr = APIErrResponse{Code: "ApplicationError", Message: e.Error()}
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
-		apiErr = APIErrResponse{Code: "UnknownError", Message: e.Error()}
-	}
-	if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-		http.Error(w, "Failed to write error response", http.StatusInternalServerError)
-	}
-}
+	var validationErr ValidationError
+	var applicationErr ApplicationError
+	var infrastructureErr InfrastructureError
 
-//
-//func ApiHandler(identityProvider TokenKeyStore, urlProvider UrlParser, logger *zap.SugaredLogger, encodedUrlChan chan<- EncodedUrl) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.EncodingRequest) {
-//		var req APIRequest
-//		err := json.NewDecoder(r.Body).Decode(&req)
-//		if err != nil {
-//			http.Error(w, "Invalid request body", http.StatusBadRequest)
-//			return
-//		}
-//
-//		urlWasEncoded, err := Encode(r.Context(), identityProvider, urlProvider, logger, EncodingRequest{
-//			OriginalURL:          req.OriginalURL,
-//			EncodeAtHost: req.EncodeAtHost,
-//		})
-//
-//		if err != nil {
-//			w.WriteHeader(http.StatusInternalServerError)
-//			err := json.NewEncoder(w).Encode(ErrorResponse{Message: err.Error()})
-//			if err != nil {
-//				panic(err)
-//			}
-//			return
-//		}
-//
-//		encodedUrlChan <- *urlWasEncoded
-//
-//		w.Header().Set("Content-Type", "application/json")
-//		w.WriteHeader(http.StatusOK)
-//		err = json.NewEncoder(w).Encode(APIResponse{
-//			OriginalURL:      urlWasEncoded.OriginalURL,
-//			ShortURL: "https://" + urlWasEncoded.Token.Value.Value() + "/" + urlWasEncoded.Token.KeyEncoded.value(),
-//		})
-//		if err != nil {
-//			panic(err)
-//		}
-//	}
-//}
+	switch {
+	case errors.As(err, &validationErr):
+		apiErr = APIErrResponse{Code: "ValidationError", Message: err.Error(), httpStatusCode: http.StatusBadRequest}
+	case errors.As(err, &applicationErr):
+		apiErr = APIErrResponse{Code: "ApplicationError", Message: err.Error(), httpStatusCode: http.StatusUnprocessableEntity}
+	case errors.As(err, &infrastructureErr):
+		apiErr = APIErrResponse{Code: "InfrastructureError", Message: err.Error(), httpStatusCode: http.StatusServiceUnavailable}
+	default:
+		apiErr = APIErrResponse{Code: "UnknownError", Message: err.Error(), httpStatusCode: http.StatusInternalServerError}
+	}
+
+	httpApi.EncodeResponse(w, r, apiErr.httpStatusCode, apiErr)
+}

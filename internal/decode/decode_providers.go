@@ -16,7 +16,7 @@ type Decoder interface {
 }
 
 type EncodedUrlsProvider interface {
-	FindOne(context.Context, core.TokenKey) (string, error)
+	FindOne(context.Context, core.TokenKey) (string, bool, error)
 }
 
 type EncodedUrlDto interface {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/beard-programmer/shortorg/internal/httpApi"
+	"github.com/beard-programmer/shortorg/internal/httpEncoder"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +33,7 @@ func HttpHandlerFunc(
 	decodeFunc Fn,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		apiRequest, err := httpApi.DecodeRequest[APIRequest](r)
+		apiRequest, err := httpEncoder.DecodeRequest[APIRequest](r)
 		if err != nil {
 			handleError(w, r, fmt.Errorf("%w: invalid request body: %v", ValidationError, err))
 			return
@@ -54,7 +54,7 @@ func HttpHandlerFunc(
 			OriginalURL: urlWasDecoded.Token.OriginalURL.String(),
 			ShortURL:    fmt.Sprintf("https://%s/%s", urlWasDecoded.Token.Host.Hostname(), urlWasDecoded.Token.KeyEncoded.Value()),
 		}
-		httpApi.EncodeResponse(w, r, http.StatusOK, response)
+		httpEncoder.EncodeResponse(w, r, http.StatusOK, response)
 	}
 }
 
@@ -72,5 +72,5 @@ func handleError(w http.ResponseWriter, r *http.Request, err error) {
 		apiErr = APIErrResponse{Code: "UnknownError", Message: err.Error(), httpStatusCode: http.StatusInternalServerError}
 	}
 
-	httpApi.EncodeResponse(w, r, apiErr.httpStatusCode, apiErr)
+	httpEncoder.EncodeResponse(w, r, apiErr.httpStatusCode, apiErr)
 }

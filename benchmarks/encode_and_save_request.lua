@@ -34,7 +34,7 @@ request = function()
     local body = '{"url": "https://subdomain-' .. random_domain .. '-something.io/library/react-' .. random_path .. '"}'
 
     -- Return the HTTP request to be sent
-    return wrk.format("POST", "/encode", {["Content-Type"] = "application/json"}, body)
+    return wrk.format("POST", "/api/encode", {["Content-Type"] = "application/json"}, body)
 end
 
 -- Response function to process each response

@@ -88,6 +88,9 @@ fabric.properties
 
 !.idea/codeStyles
 !.idea/runConfigurations
+!.idea/inspectionProfiles
+!.idea/shortorg.iml
+!.idea/vcs.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/goland+all
 

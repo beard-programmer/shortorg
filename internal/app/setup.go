@@ -73,7 +73,7 @@ func (app *App) setupConfig(ctx context.Context) error {
 		return fmt.Errorf("error processing environment variables: %w", err)
 	}
 
-	if envConfig.IsProdEnv() {
+	if envConfig.isProdEnv() {
 		config = envConfig
 	} else {
 		app.logger.Sugar().Infow("Configs set up", "config", config)
@@ -85,7 +85,13 @@ func (app *App) setupConfig(ctx context.Context) error {
 }
 
 func (app *App) setupPostgresClients(ctx context.Context) error {
-	clients, err := postgresClients.New(ctx, app.logger, app.config.PostgresClientsConfig, app.Name(), app.config.IsProdEnv())
+	clients, err := postgresClients.New(
+		ctx,
+		app.logger,
+		app.config.PostgresClientsConfig,
+		app.Name(),
+		app.config.isProdEnv(),
+	)
 	if err != nil {
 		return fmt.Errorf("setupPostgresClients: %w", err)
 	}
@@ -129,12 +135,25 @@ func (app *App) setupTokenKeyStore(ctx context.Context) error {
 
 func (app *App) setupUseCaseFns(ctx context.Context) error {
 	app.urlWasEncodedChan = make(chan encode.UrlWasEncoded, app.config.EncodedUrlsQueSize)
-	app.encodeFn = encode.NewEncodeFn(app.tokenKeyStore, infrastructure.UrlParser{}, base58.Codec{}, app.logger, app.urlWasEncodedChan)
+	app.encodeFn = encode.NewEncodeFn(
+		app.tokenKeyStore,
+		infrastructure.UrlParser{},
+		base58.Codec{},
+		app.logger,
+		app.urlWasEncodedChan,
+	)
 	app.decodeFn = decode.NewDecodeFn(app.logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, app.encodedUrlStore)
 	return nil
 }
 
 func (app *App) setupEventHandlers(ctx context.Context) error {
-	app.urlWasEncodedHandler = encodeInfrastructure.NewUrlWasEncodedHandler(app.logger, app.encodedUrlStore, 10000, 1, 250*time.Millisecond, app.urlWasEncodedChan)
+	app.urlWasEncodedHandler = encodeInfrastructure.NewUrlWasEncodedHandler(
+		app.logger,
+		app.encodedUrlStore,
+		10000,
+		1,
+		250*time.Millisecond,
+		app.urlWasEncodedChan,
+	)
 	return nil
 }

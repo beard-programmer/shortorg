@@ -32,22 +32,22 @@ func New(l *zap.Logger) *App {
 	return &App{logger: l}
 }
 
-func (App) Name() string {
+func (*App) Name() string {
 	return "shortorg"
 }
 
 type Config struct {
 	UseCache              bool                          `toml:"use_cache" envconfig:"USE_CACHE"`
 	Concurrency           int                           `toml:"concurrency" envconfig:"GOMAXPROCS" default:"2"`
-	EncodedUrlsQueSize    int64                         `toml:"encoded_urls_queue_size" envconfig:"ENCODED_URLS_QUEUE_SIZE" default:"1000"`
+	EncodedUrlsQueSize    int64                         `toml:"encoded_urls_queue_size" envconfig:"ENCODED_URLS_QUEUE_SIZE" default:"1000"` //nolint:lll
 	Debug                 bool                          `toml:"debug" envconfig:"DEBUG" default:"false"`
 	ENV                   string                        `toml:"env" envconfig:"ENV" default:"development"`
-	ApiServerConfig       apiServer.Config              `toml:"api_server" envconfig:"API_SERVER"`
+	APIServerConfig       apiServer.Config              `toml:"api_server" envconfig:"API_SERVER"`
 	PostgresClientsConfig postgresClients.ClientsConfig `toml:"postgres_clients" envconfig:"POSTGRES_CLIENTS"`
 	CacheConfig           cache.Config                  `toml:"cache" envconfig:"CACHE"`
 }
 
-func (c Config) IsProdEnv() bool {
+func (c Config) isProdEnv() bool {
 	return c.ENV == "production"
 }
 
@@ -57,7 +57,7 @@ func (app *App) Serve(ctx context.Context) error {
 		app.decodeFn,
 		app.urlWasEncodedHandler,
 		app.logger,
-		app.config.ApiServerConfig,
+		app.config.APIServerConfig,
 		app.Name(),
 	)
 

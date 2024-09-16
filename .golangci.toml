@@ -118,6 +118,8 @@ enable = [
     "errcheck",
     "gosimple",
     "govet",
+    "gofmt",
+    "gofumpt",
     "ineffassign",
     "staticcheck",
     "typecheck",

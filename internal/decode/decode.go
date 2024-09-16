@@ -5,25 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/base58"
 	"github.com/beard-programmer/shortorg/internal/core"
 	"go.uber.org/zap"
 )
 
-type UrlWasDecoded struct {
+type urlWasDecoded struct {
 	Token core.TokenStandard
 }
 
-type OriginalUrlWasNotFound struct {
-}
-
 var (
-	ValidationError     = errors.New("validation")
-	InfrastructureError = errors.New("infrastructure")
-	ApplicationError    = errors.New("application")
+	errValidation     = errors.New("validation")
+	errInfrastructure = errors.New("infrastructure")
+	errApplication    = errors.New("application")
 )
 
-type Fn = func(context.Context, DecodingRequest) (*UrlWasDecoded, bool, error)
+type Fn = func(context.Context, decodingRequest) (*urlWasDecoded, bool, error)
 
 func NewDecodeFn(
 	logger *zap.Logger,
@@ -32,20 +28,18 @@ func NewDecodeFn(
 	encodedUrlsProvider EncodedUrlsProvider,
 	// urlWasEncodedChan chan<- UrlWasDecoded,
 ) Fn {
-	return func(ctx context.Context, r DecodingRequest) (*UrlWasDecoded, bool, error) {
+	return func(ctx context.Context, r decodingRequest) (*urlWasDecoded, bool, error) {
 		return decode(
 			ctx,
 			logger,
 			urlParser,
 			codec,
 			encodedUrlsProvider,
-			//urlWasEncodedChan,
+			// urlWasEncodedChan,
 			r,
 		)
 	}
 }
-
-type UnclaimedKey = base58.IntegerExp5To6
 
 func decode(
 	ctx context.Context,
@@ -53,39 +47,39 @@ func decode(
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,
-	//_ chan<- UrlWasDecoded,
-	request DecodingRequest,
-) (*UrlWasDecoded, bool, error) {
-	validatedRequest, err := ValidatedRequest{}.New(urlParser, request)
+	// _ chan<- UrlWasDecoded,
+	request decodingRequest,
+) (*urlWasDecoded, bool, error) {
+	validatedRequest, err := newValidatedRequest(urlParser, request)
 	if err != nil {
 		return nil, false, err // validation
 	}
 
-	shortUrl := validatedRequest.ShortUrl
+	shortURL := validatedRequest.ShortURL
 
-	tokenKey, err := shortUrl.KeyEncoded.Decode(codec)
+	tokenKey, err := shortURL.KeyEncoded.Decode(codec)
 	if err != nil {
-		return nil, false, fmt.Errorf("%w: failed to validate request: %v", ValidationError, err)
+		return nil, false, fmt.Errorf("%w: failed to validate request: %v", errValidation, err)
 	}
 
 	url, isFound, err := encodedUrlsProvider.FindOne(ctx, *tokenKey)
 	if err != nil {
-		return nil, isFound, fmt.Errorf("%w: failed to generate unclaimedKey %v", InfrastructureError, err)
+		return nil, isFound, fmt.Errorf("%w: failed to generate unclaimedKey %v", errInfrastructure, err)
 	}
 	if !isFound {
 		return nil, isFound, nil
 	}
 
-	originalUrl, err := core.OriginalURLFromString(UrlParserAdapter{urlParser}, url)
+	originalURL, err := core.OriginalURLFromString(UrlParserAdapter{urlParser}, url)
 
 	if err != nil {
-		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", ApplicationError, err)
+		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", errApplication, err)
 	}
 
-	token, err := core.NewToken(codec, *tokenKey, shortUrl.Host, *originalUrl)
+	token, err := core.NewToken(codec, *tokenKey, shortURL.Host, *originalURL)
 	if err != nil {
-		return nil, false, fmt.Errorf("%w: failed to build tokene %v", ApplicationError, err)
+		return nil, false, fmt.Errorf("%w: failed to build token %v", errApplication, err)
 	}
 
-	return &UrlWasDecoded{*token}, true, nil
+	return &urlWasDecoded{*token}, true, nil
 }

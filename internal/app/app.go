@@ -11,7 +11,6 @@ import (
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
-
 	"go.uber.org/zap"
 )
 
@@ -19,7 +18,7 @@ type App struct {
 	logger               *zap.Logger
 	postgresClients      *postgresClients.Clients
 	cache                infrastructure.Cache
-	encodedUrlStore      *infrastructure.EncodedUrlStore
+	encodedURLStore      *infrastructure.EncodedURLStore
 	tokenKeyStore        *infrastructure.TokenKeyStore
 	urlWasEncodedChan    chan encode.UrlWasEncoded
 	encodeFn             encode.Fn

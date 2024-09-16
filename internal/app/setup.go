@@ -60,9 +60,9 @@ func (app *App) Setup(ctx context.Context) error {
 }
 
 func (app *App) setupConfig(ctx context.Context) error {
-	var config Config
+	var c Config
 
-	_, err := toml.DecodeFile("./config/config.dev.toml", &config)
+	_, err := toml.DecodeFile("./config/config.dev.toml", &c)
 	if err != nil {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
@@ -74,12 +74,12 @@ func (app *App) setupConfig(ctx context.Context) error {
 	}
 
 	if envConfig.isProdEnv() {
-		config = envConfig
+		c = envConfig
 	} else {
-		app.logger.Sugar().Infow("Configs set up", "config", config)
+		app.logger.Sugar().Infow("Configs set up", "config", c)
 	}
 
-	app.config = config
+	app.config = c
 
 	return nil
 }
@@ -116,11 +116,11 @@ func (app *App) setupCache(ctx context.Context) error {
 }
 
 func (app *App) setupEncodedUrlStore(ctx context.Context) error {
-	store, err := infrastructure.NewEncodedUrlStore(app.postgresClients.ShortorgClient, app.cache)
+	store, err := infrastructure.NewEncodedURLStore(app.postgresClients.ShortorgClient, app.cache)
 	if err != nil {
 		return fmt.Errorf("setupEncodedUrlStore: %w", err)
 	}
-	app.encodedUrlStore = store
+	app.encodedURLStore = store
 	return nil
 }
 
@@ -142,14 +142,14 @@ func (app *App) setupUseCaseFns(ctx context.Context) error {
 		app.logger,
 		app.urlWasEncodedChan,
 	)
-	app.decodeFn = decode.NewDecodeFn(app.logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, app.encodedUrlStore)
+	app.decodeFn = decode.NewDecodeFn(app.logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, app.encodedURLStore)
 	return nil
 }
 
 func (app *App) setupEventHandlers(ctx context.Context) error {
 	app.urlWasEncodedHandler = encodeInfrastructure.NewUrlWasEncodedHandler(
 		app.logger,
-		app.encodedUrlStore,
+		app.encodedURLStore,
 		10000,
 		1,
 		250*time.Millisecond,

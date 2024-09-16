@@ -6,29 +6,30 @@ import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type DecodingRequest interface {
+type decodingRequest interface {
 	Url() string
 }
 
-type ValidatedRequest struct {
-	ShortUrl ShortUrl
+type validatedRequest struct {
+	ShortURL shortUrl
 }
 
-func (ValidatedRequest) New(urlParser UrlParser, request DecodingRequest) (*ValidatedRequest, error) {
-	shortUrl, err := ShortUrl{}.new(urlParser, request.Url())
+func newValidatedRequest(urlParser UrlParser, request decodingRequest) (*validatedRequest, error) {
+	shortURL, err := newShortUrl(urlParser, request.Url())
 	if err != nil {
 		return nil, err
 	}
-	return &ValidatedRequest{ShortUrl: *shortUrl}, nil
+
+	return &validatedRequest{ShortURL: *shortURL}, nil
 
 }
 
-type ShortUrl struct {
+type shortUrl struct {
 	KeyEncoded core.TokenKeyEncoded
 	Host       core.TokenHost
 }
 
-func (ShortUrl) new(urlParser UrlParser, url string) (*ShortUrl, error) {
+func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
 	uri, err := urlParser.Parse(url)
 	if err != nil {
 		return nil, err
@@ -49,6 +50,6 @@ func (ShortUrl) new(urlParser UrlParser, url string) (*ShortUrl, error) {
 		return nil, err
 	}
 
-	return &ShortUrl{KeyEncoded: *encodedKey, Host: tokenHost}, nil
+	return &shortUrl{KeyEncoded: *encodedKey, Host: tokenHost}, nil
 
 }

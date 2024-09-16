@@ -13,15 +13,15 @@ import (
 )
 
 // TODO: fix errors chaos
-type EncodedUrlProviderPostgresError struct {
+type encodedURLProviderPostgresError struct {
 	Err error
 }
 
-func (e EncodedUrlProviderPostgresError) Error() string {
+func (e encodedURLProviderPostgresError) Error() string {
 	return fmt.Sprintf("EncodedUrlStore error: %v", e.Err)
 }
 
-type EncodedUrlStore struct {
+type EncodedURLStore struct {
 	postgresClient *sqlx.DB
 	cache          Cache
 }
@@ -31,23 +31,14 @@ type Cache interface {
 	Set(context.Context, any, string) error
 }
 
-func NewEncodedUrlStore(db *sqlx.DB, c Cache) (*EncodedUrlStore, error) {
+func NewEncodedURLStore(db *sqlx.DB, c Cache) (*EncodedURLStore, error) {
 	if db == nil {
 		return nil, errors.New("postgresClient is nil")
 	}
-	return &EncodedUrlStore{db, c}, nil
+	return &EncodedURLStore{db, c}, nil
 }
 
-type EncodedUrl struct {
-	TokenIdentifier int64  `db:"token_identifier"`
-	Url             string `db:"url"`
-}
-
-func (e EncodedUrl) OriginalUrl() string {
-	return e.Url
-}
-
-func (s *EncodedUrlStore) FindOne(ctx context.Context, key core.TokenKey) (string, bool, error) {
+func (s *EncodedURLStore) FindOne(ctx context.Context, key core.TokenKey) (string, bool, error) {
 	var (
 		url string
 		err error
@@ -58,13 +49,17 @@ func (s *EncodedUrlStore) FindOne(ctx context.Context, key core.TokenKey) (strin
 		return url, true, err
 	}
 
-	row := s.postgresClient.QueryRowxContext(ctx, "SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1", key.Value())
+	row := s.postgresClient.QueryRowxContext(
+		ctx,
+		"SELECT url FROM encoded_urls WHERE token_identifier=$1 LIMIT 1",
+		key.Value(),
+	)
 	err = row.Scan(&url)
 	if errors.Is(err, sql.ErrNoRows) {
 		return url, false, nil
 	}
 	if err != nil {
-		return url, false, EncodedUrlProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
+		return url, false, encodedURLProviderPostgresError{fmt.Errorf("FindOne error: failed to execute: %w", err)}
 	}
 
 	setCacheErr := s.cache.Set(ctx, key.Value(), url)
@@ -74,7 +69,7 @@ func (s *EncodedUrlStore) FindOne(ctx context.Context, key core.TokenKey) (strin
 	return url, true, err
 }
 
-func (s *EncodedUrlStore) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
+func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedUrls []encode.UrlWasEncoded) error {
 	// NamedExecContext is generating invalid sql so building query manually.
 	valueStrings := make([]string, 0, len(encodedUrls))
 	valueArgs := make([]interface{}, 0, len(encodedUrls)*2)
@@ -91,7 +86,7 @@ func (s *EncodedUrlStore) SaveMany(ctx context.Context, encodedUrls []encode.Url
 
 	_, err := s.postgresClient.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
-		return EncodedUrlProviderPostgresError{fmt.Errorf("SaveMany error: failed to execute bulk insert: %w", err)}
+		return encodedURLProviderPostgresError{fmt.Errorf("SaveMany error: failed to execute bulk insert: %w", err)}
 	}
 
 	for _, encodedUrl := range encodedUrls {

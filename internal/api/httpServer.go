@@ -76,7 +76,7 @@ func (s *Server) getServerMux(ctx context.Context) (*chi.Mux, error) {
 		"/api", func(r chi.Router) {
 			r.Use(middleware.AllowContentType("application/json"))
 			r.Post("/encode", encode.HttpHandlerFunc(s.logger(ctx), s.encodeFn))
-			r.Post("/decode", decode.HttpHandlerFunc(s.logger(ctx), s.decodeFn))
+			r.Post("/decode", decode.HTTPHandlerFunc(s.logger(ctx), s.decodeFn))
 		},
 	)
 	return mux, nil

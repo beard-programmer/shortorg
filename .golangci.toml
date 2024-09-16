@@ -112,9 +112,22 @@ context = "scope"
 [linters-settings.tenv]
 all = true
 
+[linters-settings.errorlint]
+errorf = false
+
 [linters]
 disable-all = true
 enable = [
+    "containedctx",
+    "dogsled",
+    "dupword",
+    "err113",
+    "importas",
+    "misspell",
+    "nlreturn",
+    "tagliatelle",
+    "varnamelen",
+    "contextcheck",
     "errcheck",
     "gosimple",
     "govet",
@@ -137,7 +150,6 @@ enable = [
     "errorlint",
     "exhaustive",
     "fatcontext",
-    "forbidigo",
     "funlen",
     "gocheckcompilerdirectives",
     "gochecknoglobals",

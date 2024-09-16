@@ -9,7 +9,7 @@ package-average = 10
 check-type-assertions = true
 
 [linters-settings.exhaustive]
-check = [ "switch", "map" ]
+check = ["switch", "map"]
 
 [linters-settings.exhaustruct]
 exclude = [
@@ -52,22 +52,22 @@ skipRecvDeref = false
 
 [[linters-settings.gomodguard.blocked.modules]]
 [linters-settings.gomodguard.blocked.modules."github.com/golang/protobuf"]
-recommendations = [ "google.golang.org/protobuf" ]
+recommendations = ["google.golang.org/protobuf"]
 reason = "see https://developers.google.com/protocol-buffers/docs/reference/go/faq#modules"
 
 [[linters-settings.gomodguard.blocked.modules]]
 [linters-settings.gomodguard.blocked.modules."github.com/satori/go.uuid"]
-recommendations = [ "github.com/google/uuid" ]
+recommendations = ["github.com/google/uuid"]
 reason = "satori's package is not maintained"
 
 [[linters-settings.gomodguard.blocked.modules]]
 [linters-settings.gomodguard.blocked.modules."github.com/gofrs/uuid"]
-recommendations = [ "github.com/gofrs/uuid/v5" ]
+recommendations = ["github.com/gofrs/uuid/v5"]
 reason = "gofrs' package was not go module before v5"
 
 [linters-settings.govet]
 enable-all = true
-disable = [ "fieldalignment" ]
+disable = ["fieldalignment"]
 
 [linters-settings.govet.settings.shadow]
 strict = true
@@ -95,7 +95,7 @@ ignored-functions = [
 max-func-lines = 0
 
 [linters-settings.nolintlint]
-allow-no-explanation = [ "funlen", "gocognit", "lll" ]
+allow-no-explanation = ["funlen", "gocognit", "lll"]
 require-explanation = true
 require-specific = true
 
@@ -103,7 +103,7 @@ require-specific = true
 strconcat = false
 
 [linters-settings.rowserrcheck]
-packages = [ "github.com/jmoiron/sqlx" ]
+packages = ["github.com/jmoiron/sqlx"]
 
 [linters-settings.sloglint]
 no-global = "all"
@@ -203,11 +203,11 @@ max-same-issues = 50
 
 [[issues.exclude-rules]]
 source = "(noinspection|TODO)"
-linters = [ "godot" ]
+linters = ["godot"]
 
 [[issues.exclude-rules]]
 source = "//noinspection"
-linters = [ "gocritic" ]
+linters = ["gocritic"]
 
 [[issues.exclude-rules]]
 path = "_test\\.go"

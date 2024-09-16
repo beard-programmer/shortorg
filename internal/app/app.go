@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/apiServer"
+	apiServer "github.com/beard-programmer/shortorg/internal/api"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgresClients"

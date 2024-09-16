@@ -1,4 +1,4 @@
-package apiServer
+package api
 
 import (
 	"context"
@@ -7,17 +7,18 @@ import (
 )
 
 func (s *Server) serveBackgroundJobs(ctx context.Context) {
-	encodeUrlChan := s.urlWasEncodedHandler(ctx)
+	encodeURLChan := s.urlWasEncodedHandler(ctx)
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				s.logger(ctx).Warn("context canceled, shutting down background workers",
-					zap.Duration("timeout", GracefulShutdownTimeout),
+				s.logger(ctx).Warn(
+					"context canceled, shutting down background workers",
+					zap.Duration("timeout", gracefulShutdownTimeout),
 				)
 				return
-			case err, ok := <-encodeUrlChan:
+			case err, ok := <-encodeURLChan:
 				if !ok {
 					s.logger(ctx).Error("error channel is closes for worker", zap.Error(err))
 					return

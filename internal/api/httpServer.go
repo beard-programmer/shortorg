@@ -1,4 +1,4 @@
-package apiServer
+package api
 
 import (
 	"context"
@@ -17,7 +17,10 @@ import (
 )
 
 func (s *Server) serveHTTP(ctx context.Context) error {
-
+	const (
+		readTimeout  = 5 * time.Second
+		writeTimeout = 5 * time.Second
+	)
 	serverMux, err := s.getServerMux(ctx)
 	if err != nil {
 		return fmt.Errorf("create http server mux: %w", err)
@@ -26,32 +29,37 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", s.config.Host, strconv.Itoa(s.config.HTTP.InternalPort)),
 		Handler:      serverMux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
 	}
 
 	go func() {
 		<-ctx.Done()
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), GracefulShutdownTimeout)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 		defer shutdownCancel()
-		s.logger(ctx).Warn("context canceled, shutting down gracefully with timeout",
-			zap.Duration("timeout", GracefulShutdownTimeout),
+		s.logger(ctx).Warn(
+			"context canceled, shutting down gracefully with timeout",
+			zap.Duration("timeout", gracefulShutdownTimeout),
 		)
 
 		s.logger(ctx).Info("shutting down http-server")
-		err := httpServer.Shutdown(shutdownCtx)
-		if err != nil {
-			s.logger(ctx).Error("http shutdown error", zap.Error(err))
+		shutdownErr := httpServer.Shutdown(shutdownCtx)
+		if shutdownErr != nil {
+			s.logger(ctx).Error("http shutdown error", zap.Error(shutdownErr))
 			<-shutdownCtx.Done()
 			s.logger(ctx).Fatal(
 				"shutting down timeout reached, stopping through Fatal",
-				zap.Duration("timeout", GracefulShutdownTimeout),
+				zap.Duration("timeout", gracefulShutdownTimeout),
 			)
 		}
 		s.logger(ctx).Info("successfully shut down http server")
 	}()
 
-	s.logger(ctx).Info("starting http-server", zap.String("addr", httpServer.Addr), zap.Int("concurrency", runtime.GOMAXPROCS(0)))
+	s.logger(ctx).Info(
+		"starting http-server",
+		zap.String("addr", httpServer.Addr),
+		zap.Int("concurrency", runtime.GOMAXPROCS(0)),
+	)
 
 	err = httpServer.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -64,11 +72,13 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 func (s *Server) getServerMux(ctx context.Context) (*chi.Mux, error) {
 	mux := s.wrapWithDefaultMiddlewares(chi.NewMux())
 
-	mux.Route("/api", func(r chi.Router) {
-		r.Use(middleware.AllowContentType("application/json"))
-		r.Post("/encode", encode.HttpHandlerFunc(s.logger(ctx), s.encodeFn))
-		r.Post("/decode", decode.HttpHandlerFunc(s.logger(ctx), s.decodeFn))
-	})
+	mux.Route(
+		"/api", func(r chi.Router) {
+			r.Use(middleware.AllowContentType("application/json"))
+			r.Post("/encode", encode.HttpHandlerFunc(s.logger(ctx), s.encodeFn))
+			r.Post("/decode", decode.HttpHandlerFunc(s.logger(ctx), s.decodeFn))
+		},
+	)
 	return mux, nil
 }
 

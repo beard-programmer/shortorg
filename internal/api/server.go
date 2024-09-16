@@ -1,4 +1,4 @@
-package apiServer
+package api
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	GracefulShutdownTimeout = 5 * time.Second
+	gracefulShutdownTimeout = 5 * time.Second
 )
 
 type Server struct {
@@ -67,7 +67,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	return nil
 }
 
-func (s *Server) logger(ctx context.Context) *zap.Logger {
+func (s *Server) logger(_ context.Context) *zap.Logger {
 	// TODO: add context to logger
 	return s._logger
 }

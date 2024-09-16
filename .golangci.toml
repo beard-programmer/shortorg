@@ -1,0 +1,222 @@
+[run]
+timeout = "3m"
+
+[linters-settings.cyclop]
+max-complexity = 30
+package-average = 10
+
+[linters-settings.errcheck]
+check-type-assertions = true
+
+[linters-settings.exhaustive]
+check = [ "switch", "map" ]
+
+[linters-settings.exhaustruct]
+exclude = [
+    "^net/http.Client$",
+    "^net/http.Cookie$",
+    "^net/http.Request$",
+    "^net/http.Response$",
+    "^net/http.Server$",
+    "^net/http.Transport$",
+    "^net/url.URL$",
+    "^os/exec.Cmd$",
+    "^reflect.StructField$",
+    "^github.com/Shopify/sarama.Config$",
+    "^github.com/Shopify/sarama.ProducerMessage$",
+    "^github.com/mitchellh/mapstructure.DecoderConfig$",
+    "^github.com/prometheus/client_golang/.+Opts$",
+    "^github.com/spf13/cobra.Command$",
+    "^github.com/spf13/cobra.CompletionOptions$",
+    "^github.com/stretchr/testify/mock.Mock$",
+    "^github.com/testcontainers/testcontainers-go.+Request$",
+    "^github.com/testcontainers/testcontainers-go.FromDockerfile$",
+    "^golang.org/x/tools/go/analysis.Analyzer$",
+    "^google.golang.org/protobuf/.+Options$",
+    "^gopkg.in/yaml.v3.Node$"
+]
+
+[linters-settings.funlen]
+lines = 100
+statements = 50
+ignore-comments = true
+
+[linters-settings.gocognit]
+min-complexity = 20
+
+[linters-settings.gocritic.settings.captLocal]
+paramsOnly = false
+
+[linters-settings.gocritic.settings.underef]
+skipRecvDeref = false
+
+[[linters-settings.gomodguard.blocked.modules]]
+[linters-settings.gomodguard.blocked.modules."github.com/golang/protobuf"]
+recommendations = [ "google.golang.org/protobuf" ]
+reason = "see https://developers.google.com/protocol-buffers/docs/reference/go/faq#modules"
+
+[[linters-settings.gomodguard.blocked.modules]]
+[linters-settings.gomodguard.blocked.modules."github.com/satori/go.uuid"]
+recommendations = [ "github.com/google/uuid" ]
+reason = "satori's package is not maintained"
+
+[[linters-settings.gomodguard.blocked.modules]]
+[linters-settings.gomodguard.blocked.modules."github.com/gofrs/uuid"]
+recommendations = [ "github.com/gofrs/uuid/v5" ]
+reason = "gofrs' package was not go module before v5"
+
+[linters-settings.govet]
+enable-all = true
+disable = [ "fieldalignment" ]
+
+[linters-settings.govet.settings.shadow]
+strict = true
+
+[linters-settings.inamedparam]
+skip-single-param = true
+
+[linters-settings.mnd]
+ignored-functions = [
+    "args.Error",
+    "flag.Arg",
+    "flag.Duration.*",
+    "flag.Float.*",
+    "flag.Int.*",
+    "flag.Uint.*",
+    "os.Chmod",
+    "os.Mkdir.*",
+    "os.OpenFile",
+    "os.WriteFile",
+    "prometheus.ExponentialBuckets.*",
+    "prometheus.LinearBuckets"
+]
+
+[linters-settings.nakedret]
+max-func-lines = 0
+
+[linters-settings.nolintlint]
+allow-no-explanation = [ "funlen", "gocognit", "lll" ]
+require-explanation = true
+require-specific = true
+
+[linters-settings.perfsprint]
+strconcat = false
+
+[linters-settings.rowserrcheck]
+packages = [ "github.com/jmoiron/sqlx" ]
+
+[linters-settings.sloglint]
+no-global = "all"
+context = "scope"
+
+[linters-settings.tenv]
+all = true
+
+[linters]
+disable-all = true
+enable = [
+    "errcheck",
+    "gosimple",
+    "govet",
+    "ineffassign",
+    "staticcheck",
+    "typecheck",
+    "unused",
+    "asasalint",
+    "asciicheck",
+    "bidichk",
+    "bodyclose",
+    "canonicalheader",
+    "copyloopvar",
+    "cyclop",
+    "dupl",
+    "durationcheck",
+    "errname",
+    "errorlint",
+    "exhaustive",
+    "fatcontext",
+    "forbidigo",
+    "funlen",
+    "gocheckcompilerdirectives",
+    "gochecknoglobals",
+    "gochecknoinits",
+    "gochecksumtype",
+    "gocognit",
+    "goconst",
+    "gocritic",
+    "gocyclo",
+    "godot",
+    "goimports",
+    "gomoddirectives",
+    "gomodguard",
+    "goprintffuncname",
+    "gosec",
+    "intrange",
+    "lll",
+    "loggercheck",
+    "makezero",
+    "mirror",
+    "mnd",
+    "musttag",
+    "nakedret",
+    "nestif",
+    "nilerr",
+    "nilnil",
+    "noctx",
+    "nolintlint",
+    "nonamedreturns",
+    "nosprintfhostport",
+    "perfsprint",
+    "predeclared",
+    "promlinter",
+    "protogetter",
+    "reassign",
+    "revive",
+    "rowserrcheck",
+    "sloglint",
+    "spancheck",
+    "sqlclosecheck",
+    "stylecheck",
+    "tenv",
+    "testableexamples",
+    "testifylint",
+    "testpackage",
+    "tparallel",
+    "unconvert",
+    "unparam",
+    "usestdlibvars",
+    "wastedassign",
+    "whitespace",
+    "decorder",
+    "exhaustruct",
+    "gci",
+    "godox",
+    "goheader",
+    "interfacebloat",
+    "ireturn",
+    "prealloc",
+    "wrapcheck"
+]
+
+[issues]
+max-same-issues = 50
+
+[[issues.exclude-rules]]
+source = "(noinspection|TODO)"
+linters = [ "godot" ]
+
+[[issues.exclude-rules]]
+source = "//noinspection"
+linters = [ "gocritic" ]
+
+[[issues.exclude-rules]]
+path = "_test\\.go"
+linters = [
+    "bodyclose",
+    "dupl",
+    "funlen",
+    "goconst",
+    "gosec",
+    "noctx",
+    "wrapcheck"
+]

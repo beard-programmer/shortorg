@@ -24,7 +24,7 @@ func (r APIRequest) Host() *string {
 
 type APIResponse struct {
 	URL      string `json:"url"`
-	ShortURL string `json:"short_url"`
+	ShortURL string `json:"shortUrl"`
 }
 
 type APIErrResponse struct {

@@ -7,17 +7,17 @@ type TokenHost interface {
 }
 
 func TokenHostFromString(host *string) (TokenHost, error) {
-	if host == nil || *host == "" || *host == StandardTokenHost {
-		return &TokenHostStandard{}, nil
+	if host == nil || *host == "" || *host == standardTokenHost {
+		return &tokenHostStandard{}, nil
 	}
 
 	return nil, fmt.Errorf("token host %v is not supported", *host)
 }
 
-const StandardTokenHost = "shortl.org"
+const standardTokenHost = "shortl.org"
 
-type TokenHostStandard struct{}
+type tokenHostStandard struct{}
 
-func (t *TokenHostStandard) Hostname() string {
-	return StandardTokenHost
+func (t *tokenHostStandard) Hostname() string {
+	return standardTokenHost
 }

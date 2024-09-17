@@ -30,7 +30,7 @@ request = function()
 --     current_index = current_index + 1
 
     -- Create the HTTP request body
-    local body = '{"short_url": "https://shortl.org/2E1Moa"}'
+    local body = '{"shortUrl": "https://shortl.org/2E1Moa"}'
 
     -- Return the HTTP request to be sent
     return wrk.format("POST", "/api/decode", {["Content-Type"] = "application/json"}, body)

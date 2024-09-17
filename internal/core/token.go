@@ -51,17 +51,9 @@ type TokenStandard struct {
 	OriginalURL OriginalURL
 }
 
-type Encoder interface {
-	Encode(int64) string
-}
-
-type Decoder interface {
-	Decode(string) (int64, error)
-}
-
 func NewToken(codec Encoder, tokenKey TokenKey, tokenHost TokenHost, originalUrl OriginalURL) (*TokenStandard, error) {
 	switch tokenHost.(type) {
-	case *TokenHostStandard:
+	case *tokenHostStandard:
 		return TokenStandard{}.new(codec, tokenKey, tokenHost, originalUrl)
 	default:
 		return nil, errors.New("only standard tokens are supported")

@@ -74,8 +74,8 @@ func (s *Server) getServerMux(_ context.Context) *chi.Mux {
 	mux.Route(
 		"/api", func(r chi.Router) {
 			r.Use(middleware.AllowContentType("application/json"))
-			r.Post("/encode", encode.HttpHandlerFunc(s.logger, s.encodeFn))
-			r.Post("/decode", decode.HTTPHandlerFunc(s.logger, s.decodeFn))
+			r.HandleFunc("POST /encode", encode.HttpHandlerFunc(s.logger, s.encodeFn))
+			r.HandleFunc("POST /decode", decode.HTTPHandlerFunc(s.logger, s.decodeFn))
 		},
 	)
 
@@ -83,7 +83,6 @@ func (s *Server) getServerMux(_ context.Context) *chi.Mux {
 }
 
 func (s *Server) wrapWithDefaultMiddlewares(mux *chi.Mux) *chi.Mux {
-
 	logger := httplog.NewLogger(
 		"", httplog.Options{
 			LogLevel:        slog.LevelDebug,

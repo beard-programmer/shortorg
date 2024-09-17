@@ -29,7 +29,7 @@ type responseErrHTTP struct {
 }
 
 func HTTPHandlerFunc(
-	_ *appLogger.AppLogger,
+	logger *appLogger.AppLogger,
 	decodeFunc Fn,
 ) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {

@@ -27,7 +27,7 @@ MaxNumberOfElements = 100000
 MaxMbSize = 512
 
 [Infrastructure.TokenStore]
-BufferSize = 10
+BufferSize = 1000
 
 [APIServer]
 Host = "localhost"

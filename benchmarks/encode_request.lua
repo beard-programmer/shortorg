@@ -17,6 +17,15 @@ local function randomString(length)
     end
 end
 
+-- Open file for appending short URLs
+local file = io.open("short_urls_out.txt", "a")
+
+-- Function to log short URL to file
+local function logShortUrl(short_url)
+    file:write(short_url .. "\n")
+    file:flush() -- Ensure the data is written to the file immediately
+end
+
 -- HTTP request function to be called for each request
 request = function()
     -- Random string appended to URL
@@ -25,5 +34,24 @@ request = function()
     local body = '{"url": "https://subdomain-' .. random_domain .. '-something.io/library/react-' .. random_path .. '"}'
 
     -- Return the HTTP request to be sent
-    return wrk.format("POST", "/encode", {["Content-Type"] = "application/json"}, body)
+    return wrk.format("POST", "/api/encode", {["Content-Type"] = "application/json"}, body)
+end
+
+-- Response function to process each response
+response = function(status, headers, body)
+    if status == 200 then
+        -- Parse the response body to extract the short_url
+        local short_url = string.match(body, '"shortUrl"%s*:%s*"([^"]+)"')
+        if short_url then
+            -- Log the short URL to the file
+            logShortUrl(short_url)
+        end
+    end
+end
+
+-- Cleanup function to close the file when the script is done
+done = function(summary, latency, requests)
+    if file then
+        file:close()
+    end
 end

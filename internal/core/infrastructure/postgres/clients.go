@@ -137,11 +137,11 @@ func (h *sqlHook) After(ctx context.Context, query string, args ...interface{}) 
 
 	duration := time.Since(startTime)
 
-	if 100*time.Millisecond < duration {
+	if 50*time.Millisecond < duration {
 		h.logger.WarnContext(ctx,
 			"Sql query took longer than 10ms",
 			"query", query,
-			"args", args,
+			//"args", args,
 			"duration", duration,
 		)
 	}

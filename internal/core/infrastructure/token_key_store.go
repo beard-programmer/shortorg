@@ -33,7 +33,7 @@ func NewTokenKeyStore(
 	config tokenStoreConfig,
 ) (*TokenKeyStore, error) {
 	if postgresClient == nil {
-		return nil, errors.New("postgresClient is nil")
+		return nil, errors.New("NewTokenKeyStore: postgresClient is not provided")
 	}
 	bufferChan := make(chan core.TokenKey, config.BufferSize)
 	errChan := make(chan error, 1)
@@ -75,8 +75,8 @@ func (s *TokenKeyStore) bufferRefillInfiniteLoop(ctx context.Context) {
 					s.errChan <- fmt.Errorf("bufferRefillInfiniteLoop error: %w", err)
 					return
 				}
-				for _, ti := range batch {
-					s.bufferChan <- *ti
+				for _, tokenKey := range batch {
+					s.bufferChan <- *tokenKey
 				}
 				ticker.Reset(refillFrequency)
 			}

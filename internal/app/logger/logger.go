@@ -1,22 +1,17 @@
 package logger
 
 import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"log/slog"
+	"os"
+	"time"
+
+	"github.com/lmittmann/tint"
 )
 
-type AppLogger = zap.Logger
-type SugaredLogger = zap.SugaredLogger
-
-func String(key string, val string) zap.Field {
-	return zap.String(key, val)
-}
+type AppLogger = slog.Logger
 
 func NewLogger() (*AppLogger, error) {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-	config.EncoderConfig.CallerKey = ""
+	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{TimeFormat: time.DateTime}))
 
-	return config.Build()
+	return logger, nil
 }

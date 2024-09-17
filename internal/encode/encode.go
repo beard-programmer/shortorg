@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/core"
-	"go.uber.org/zap"
 )
 
 type UrlWasEncoded struct {
@@ -18,7 +18,7 @@ func NewEncodeFn(
 	tokenKeyStore TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 ) Fn {
 	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
@@ -55,7 +55,7 @@ func encode(
 	keyIssuer TokenKeyStore,
 	urlParser UrlParser,
 	codec Encoder,
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 	request EncodingRequest,
 ) (*UrlWasEncoded, error) {

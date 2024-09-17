@@ -4,64 +4,53 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"go.uber.org/zap"
-
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httplog/v2"
 )
 
 func (s *Server) serveHTTP(ctx context.Context) error {
-	const (
-		readTimeout  = 5 * time.Second
-		writeTimeout = 5 * time.Second
-	)
 	serverMux, err := s.getServerMux(ctx)
 	if err != nil {
 		return fmt.Errorf("create http server mux: %w", err)
 	}
 
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf("%s:%s", s.config.Host, strconv.Itoa(s.config.HTTP.InternalPort)),
-		Handler:      serverMux,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
+		Addr:    fmt.Sprintf("%s:%s", s.config.Host, strconv.Itoa(s.config.HTTP.InternalPort)),
+		Handler: serverMux,
 	}
 
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 		defer shutdownCancel()
-		s.logger(ctx).Warn(
+		s.logger.WarnContext(ctx,
 			"context canceled, shutting down gracefully with timeout",
-			zap.Duration("timeout", gracefulShutdownTimeout),
+			"timeout", gracefulShutdownTimeout,
 		)
 
-		s.logger(ctx).Info("shutting down http-server")
+		s.logger.WarnContext(ctx, "shutting down http-server")
 		shutdownErr := httpServer.Shutdown(shutdownCtx) //nolint:contextcheck // gracefully shutdown
 		if shutdownErr != nil {
-			s.logger(ctx).Error("http shutdown error", zap.Error(shutdownErr))
+			s.logger.ErrorContext(ctx, "http shutdown error", shutdownErr)
+
 			<-shutdownCtx.Done()
 
-			s.logger(ctx).Fatal(
-				"shutting down timeout reached, stopping through Fatal",
-				zap.Duration("timeout", gracefulShutdownTimeout),
-			)
+			s.logger.ErrorContext(ctx, "shutting down timeout reached, stopping through panic", "timeout", gracefulShutdownTimeout)
+			panic(shutdownErr)
 		}
-		s.logger(ctx).Info("successfully shut down http server")
+		s.logger.WarnContext(ctx, "http shutdown complete")
 	}()
 
-	s.logger(ctx).Info(
-		"starting http-server",
-		zap.String("addr", httpServer.Addr),
-		zap.Int("concurrency", runtime.GOMAXPROCS(0)),
-	)
+	s.logger.InfoContext(ctx, "http server started", "addr", httpServer.Addr, "concurrency", runtime.GOMAXPROCS(0))
 
 	err = httpServer.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -77,8 +66,8 @@ func (s *Server) getServerMux(ctx context.Context) (*chi.Mux, error) {
 	mux.Route(
 		"/api", func(r chi.Router) {
 			r.Use(middleware.AllowContentType("application/json"))
-			r.Post("/encode", encode.HttpHandlerFunc(s.logger(ctx), s.encodeFn))
-			r.Post("/decode", decode.HTTPHandlerFunc(s.logger(ctx), s.decodeFn))
+			r.Post("/encode", encode.HttpHandlerFunc(s.logger, s.encodeFn))
+			r.Post("/decode", decode.HTTPHandlerFunc(s.logger, s.decodeFn))
 		},
 	)
 
@@ -86,11 +75,28 @@ func (s *Server) getServerMux(ctx context.Context) (*chi.Mux, error) {
 }
 
 func (s *Server) wrapWithDefaultMiddlewares(mux *chi.Mux) *chi.Mux {
-	mux.Use(middleware.Logger)
-	mux.Use(middleware.RequestID)
+	const (
+		httpTimeout = 5 * time.Second
+	)
+
+	logger := httplog.NewLogger("", httplog.Options{
+		LogLevel:        slog.LevelDebug,
+		Concise:         true,
+		RequestHeaders:  true,
+		TimeFieldFormat: time.DateTime,
+		Tags: map[string]string{
+			"env": s.env,
+		},
+		QuietDownRoutes: []string{
+			"/api/decode",
+			"/api/encode",
+		},
+		QuietDownPeriod: 1 * time.Second,
+	})
+	mux.Use(httplog.RequestLogger(logger, []string{"/ping", "/debug"}))
 	mux.Use(middleware.RealIP)
-	mux.Use(middleware.Recoverer)
 	mux.Use(middleware.Heartbeat("/ping"))
+	mux.Use(middleware.Timeout(httpTimeout))
 	mux.Mount("/debug", middleware.Profiler())
 
 	return mux

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/core"
-	"go.uber.org/zap"
 )
 
 type urlWasDecoded struct {
@@ -22,7 +22,7 @@ var (
 type Fn = func(context.Context, decodingRequest) (*urlWasDecoded, bool, error)
 
 func NewDecodeFn(
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,
@@ -43,7 +43,7 @@ func NewDecodeFn(
 
 func decode(
 	ctx context.Context,
-	_ *zap.Logger,
+	_ *appLogger.AppLogger,
 	urlParser UrlParser,
 	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,

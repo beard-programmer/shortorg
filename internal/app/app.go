@@ -30,14 +30,14 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 	env := os.Getenv("APP_ENV")
 	cfg, err := config{}.load(env)
 	if err != nil {
-		return nil, fmt.Errorf("app.New: setup cfg: %w", err)
+		return nil, fmt.Errorf("app.ConnectToClients: setup cfg: %w", err)
 	}
 
-	logger.Sugar().Infow("app.New: cfg was set up", "cfg", cfg)
+	logger.InfoContext(ctx, "app.ConnectToClients: cfg was set up", "cfg", cfg)
 
 	_ = runtime.GOMAXPROCS(cfg.Concurrency)
 
-	clients, err := postgres.New(
+	clients, err := postgres.ConnectToClients(
 		ctx,
 		logger,
 		cfg.PostgresClients,
@@ -45,19 +45,19 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 		cfg.isProdEnv(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("app.New: setup postgres clients: %w", err)
+		return nil, fmt.Errorf("app.ConnectToClients: setup postgres clients: %w", err)
 	}
 
 	postgresClients := clients
 
 	encodedUrlCache, err := cache.NewCache[string](cfg.Cache)
 	if err != nil {
-		return nil, fmt.Errorf("app.New: setupEncodedURLStore: %w", err)
+		return nil, fmt.Errorf("app.ConnectToClients: setupEncodedURLStore: %w", err)
 	}
 
 	encodedURLStore, err := infrastructure.NewEncodedURLStore(postgresClients.ShortorgClient, encodedUrlCache, logger)
 	if err != nil {
-		return nil, fmt.Errorf("app.New: setupEncodedUrlStore: %w", err)
+		return nil, fmt.Errorf("app.ConnectToClients: setupEncodedUrlStore: %w", err)
 	}
 
 	tokenStore, err := infrastructure.NewTokenKeyStore(
@@ -67,7 +67,7 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 		cfg.Infrastructure.TokenStore,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("app.New: setup token key store: %w", err)
+		return nil, fmt.Errorf("app.ConnectToClients: setup token key store: %w", err)
 	}
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, cfg.EncodedUrlsQueSize)
@@ -109,6 +109,7 @@ func (app *App) Serve(ctx context.Context) error {
 		app.logger,
 		app.cfg.APIServer,
 		Name(),
+		app.cfg.Env,
 	)
 
 	err := server.Serve(ctx)

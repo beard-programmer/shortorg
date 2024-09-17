@@ -20,25 +20,13 @@ func NewCache[T any](cfg Config) (infrastructure.Cache[T], error) {
 		return &c, nil
 	}
 
-	ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cfg.MaxNumberOfElements,
-		MaxCost:     cfg.MaxMbSize,
-		BufferItems: 64,
-	})
-	if err != nil {
-		return nil, err
-	}
-	rStore := ristrettoStore.NewRistretto(ristrettoCache)
-	cacheManager := ekoCache.New[T](rStore)
-	return &InMemory[T]{*cacheManager}, nil
-}
-
-func NewInMemory[T any](cgx Config) (*InMemory[T], error) {
-	ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cgx.MaxNumberOfElements,
-		MaxCost:     cgx.MaxMbSize,
-		BufferItems: 64,
-	})
+	ristrettoCache, err := ristretto.NewCache(
+		&ristretto.Config{
+			NumCounters: cfg.MaxNumberOfElements,
+			MaxCost:     cfg.MaxMbSize,
+			BufferItems: 64,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

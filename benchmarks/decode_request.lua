@@ -27,7 +27,7 @@ request = function()
     local short_url = short_urls[random_index]
 
     -- Create the HTTP request body
-    local body = '{"short_url": "' .. short_url .. '"}'
+    local body = '{"shortUrl": "' .. short_url .. '"}'
 
     -- Return the HTTP request to be sent
     return wrk.format("POST", "/api/decode", {["Content-Type"] = "application/json"}, body)

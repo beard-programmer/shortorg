@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/httpEncoder"
-	"go.uber.org/zap"
 )
 
 type requestHTTP struct {
@@ -29,7 +29,7 @@ type responseErrHTTP struct {
 }
 
 func HTTPHandlerFunc(
-	_ *zap.Logger,
+	_ *appLogger.AppLogger,
 	decodeFunc Fn,
 ) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {

@@ -22,7 +22,7 @@ type Clients struct {
 	ShortorgClient        *sqlx.DB
 }
 
-func New(
+func ConnectToClients(
 	ctx context.Context,
 	logger *appLogger.AppLogger,
 	cfg ClientsConfig,
@@ -64,7 +64,7 @@ func newPostgresClient(
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgtesClient: %w", err)
 	}
-	logger.Info("Successfully connected to database", appLogger.String("database", cfg.DBName))
+	logger.InfoContext(ctx, "Successfully connected to database", "database", cfg.DBName)
 	connection.SetMaxOpenConns(cfg.MaxConnections)
 	connection.SetMaxIdleConns(cfg.MaxIdleConnections)
 
@@ -93,21 +93,21 @@ func newPostgresClient(
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	logger.Info("Migrations applied successfully", appLogger.String("database", cfg.DBName))
+	logger.InfoContext(ctx, "Migrations applied successfully", "database", cfg.DBName)
 
 	return connection, nil
 }
 
 func registerSQLHook(logger *appLogger.AppLogger) sqlHook {
 	logger.Info("Registering sql hook")
-	hook := sqlHook{logger: logger.Sugar()}
+	hook := sqlHook{logger}
 	sql.Register(hook.driverName(), hook.driver())
 
 	return hook
 }
 
 type sqlHook struct {
-	logger *appLogger.SugaredLogger
+	logger *appLogger.AppLogger
 }
 
 func (h *sqlHook) driver() driver.Driver {
@@ -138,7 +138,7 @@ func (h *sqlHook) After(ctx context.Context, query string, args ...interface{}) 
 	duration := time.Since(startTime)
 
 	if 100*time.Millisecond < duration {
-		h.logger.Warnln(
+		h.logger.WarnContext(ctx,
 			"Sql query took longer than 10ms",
 			"query", query,
 			"args", args,
@@ -153,7 +153,7 @@ func (h *sqlHook) OnError(ctx context.Context, err error, query string, args ...
 	startTime, ok := ctx.Value(ctxKeyStartTime{}).(time.Time)
 	if ok {
 		duration := time.Since(startTime)
-		h.logger.Errorw(
+		h.logger.ErrorContext(ctx,
 			"Query error",
 			"query", query,
 			"args", args,
@@ -161,7 +161,7 @@ func (h *sqlHook) OnError(ctx context.Context, err error, query string, args ...
 			"duration", duration.Seconds(),
 		)
 	} else {
-		h.logger.Errorw(
+		h.logger.ErrorContext(ctx,
 			"Query error",
 			"query", query,
 			"args", args,

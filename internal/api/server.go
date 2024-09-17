@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/beard-programmer/shortorg/internal/encode/infrastructure"
-	"go.uber.org/zap"
 )
 
 const (
@@ -22,16 +22,18 @@ type Server struct {
 	config               Config
 
 	serverName string
-	_logger    *zap.Logger
+	env        string
+	logger     *appLogger.AppLogger
 }
 
 func New(
 	encodeFn encode.Fn,
 	decodeFn decode.Fn,
 	urlWasEncodedHandler infrastructure.URLWasEncodedHandlerFn,
-	zapLogger *zap.Logger,
+	logger *appLogger.AppLogger,
 	config Config,
 	serverName string,
+	env string,
 ) *Server {
 	return &Server{
 		encodeFn:             encodeFn,
@@ -39,7 +41,8 @@ func New(
 		urlWasEncodedHandler: urlWasEncodedHandler,
 		config:               config,
 		serverName:           serverName,
-		_logger:              zapLogger,
+		logger:               logger,
+		env:                  env,
 	}
 }
 
@@ -65,9 +68,4 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *Server) logger(_ context.Context) *zap.Logger {
-	// TODO: add context to logger
-	return s._logger
 }

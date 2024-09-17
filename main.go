@@ -6,27 +6,27 @@ import (
 	"syscall"
 
 	"github.com/beard-programmer/shortorg/internal/app"
-	"github.com/beard-programmer/shortorg/internal/app/logger"
-	"go.uber.org/zap"
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 )
 
 func main() {
-	zapLogger, err := logger.NewLogger()
+	logger, err := appLogger.NewLogger()
 	if err != nil {
 		panic(err)
 	}
 
-	application, err := app.New(context.Background(), zapLogger)
+	application, err := app.New(context.Background(), logger)
 	if err != nil {
-		zapLogger.Fatal("application setup error", zap.Error(err))
+		logger.Error("application setup error", err)
+		panic(err)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 	defer cancel()
 	err = application.Serve(ctx)
 	if err != nil {
-		zapLogger.Error("application serve error", zap.Error(err))
+		logger.ErrorContext(ctx, "application serve error", err)
 	}
 
-	zapLogger.Warn("program exits")
+	logger.Warn("program exits")
 }

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/encode"
-	"go.uber.org/zap"
 )
 
 type URLWasEncodedHandlerFn = func(ctx context.Context) <-chan error
@@ -16,7 +16,7 @@ type BatchSave interface {
 }
 
 func NewUrlWasEncodedHandler(
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	store BatchSave,
 	batchSize int,
 	concurrency int,
@@ -33,7 +33,7 @@ func NewUrlWasEncodedHandler(
 				select {
 				case errChan <- err:
 				default:
-					logger.Error("Error channel full, error discarded:", zap.Error(err))
+					logger.ErrorContext(ctx, "Error channel full, error discarded:", err)
 				}
 			}
 			return nil
@@ -59,7 +59,7 @@ func NewUrlWasEncodedHandler(
 									return
 								}
 							}
-							logger.Info("Input channel closed, worker shutting down")
+							logger.WarnContext(ctx, "Input channel closed, worker shutting down")
 							return
 						}
 
@@ -86,7 +86,7 @@ func NewUrlWasEncodedHandler(
 						ticker.Reset(retryPeriod)
 					case <-ctx.Done():
 						if 0 < len(batch) {
-							logger.Info("Context canceled, processing remaining batch before shutdown")
+							logger.WarnContext(ctx, "Context canceled, processing remaining batch before shutdown")
 							err := process(ctx, batch)
 							if err != nil {
 								errChan <- err

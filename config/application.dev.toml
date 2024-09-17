@@ -1,15 +1,7 @@
 Env = "dev"
-TokenKeyStoreBuffer = 10
 EncodedUrlsQueSize = 10000
 Concurrency = 2
 IsDebug = false
-UseCache = false
-
-[APIServer]
-Host = "localhost"
-
-[APIServer.HTTP]
-InternalPort = 8080
 
 [PostgresClients.TokenIdentifier]
 User = "identity"
@@ -30,5 +22,17 @@ MaxConnections = 40
 MaxIdleConnections = 40
 
 [Cache]
+UseCache = false
 MaxNumberOfElements = 100000
 MaxMbSize = 512
+
+[Infrastructure.TokenStore]
+BufferSize = 10
+
+[APIServer]
+Host = "localhost"
+
+[APIServer.HTTP]
+InternalPort = 8080
+
+

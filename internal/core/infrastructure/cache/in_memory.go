@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/dgraph-io/ristretto"
 	ekoCache "github.com/eko/gocache/lib/v4/cache"
 	ristrettoStore "github.com/eko/gocache/store/ristretto/v4"
@@ -11,6 +12,25 @@ import (
 
 type InMemory[T any] struct {
 	cacheManager ekoCache.Cache[T]
+}
+
+func NewCache[T any](cfg Config) (infrastructure.Cache[T], error) {
+	if !cfg.UseCache {
+		c := MockCache[T]{}
+		return &c, nil
+	}
+
+	ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: cfg.MaxNumberOfElements,
+		MaxCost:     cfg.MaxMbSize,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return nil, err
+	}
+	rStore := ristrettoStore.NewRistretto(ristrettoCache)
+	cacheManager := ekoCache.New[T](rStore)
+	return &InMemory[T]{*cacheManager}, nil
 }
 
 func NewInMemory[T any](cgx Config) (*InMemory[T], error) {

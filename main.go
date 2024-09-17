@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	zapLogger, err := logger.Logger()
+	zapLogger, err := logger.NewLogger()
 	if err != nil {
 		panic(err)
 	}

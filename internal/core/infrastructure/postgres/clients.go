@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"time"
 
+	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file" //
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/qustavo/sqlhooks/v2"
-	"go.uber.org/zap"
 )
 
 type Clients struct {
@@ -24,12 +24,12 @@ type Clients struct {
 
 func New(
 	ctx context.Context,
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	cfg ClientsConfig,
 	appName string,
 	isProd bool,
 ) (*Clients, error) {
-	registeredSQLHook := registerSQLHook(logger.Sugar())
+	registeredSQLHook := registerSQLHook(logger)
 	newClientFn := func(ctx context.Context, cfg config) (*sqlx.DB, error) {
 		return newPostgresClient(ctx, logger, cfg, registeredSQLHook, appName, isProd)
 	}
@@ -48,7 +48,7 @@ func New(
 
 func newPostgresClient(
 	ctx context.Context,
-	logger *zap.Logger,
+	logger *appLogger.AppLogger,
 	cfg config,
 	registeredSQLHook sqlHook,
 	appName string,
@@ -64,7 +64,7 @@ func newPostgresClient(
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgtesClient: %w", err)
 	}
-	logger.Info("Successfully connected to database", zap.String("database", cfg.DBName))
+	logger.Info("Successfully connected to database", appLogger.String("database", cfg.DBName))
 	connection.SetMaxOpenConns(cfg.MaxConnections)
 	connection.SetMaxIdleConns(cfg.MaxIdleConnections)
 
@@ -93,21 +93,21 @@ func newPostgresClient(
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	logger.Info("Migrations applied successfully", zap.String("database", cfg.DBName))
+	logger.Info("Migrations applied successfully", appLogger.String("database", cfg.DBName))
 
 	return connection, nil
 }
 
-func registerSQLHook(logger *zap.SugaredLogger) sqlHook {
+func registerSQLHook(logger *appLogger.AppLogger) sqlHook {
 	logger.Info("Registering sql hook")
-	hook := sqlHook{logger: logger}
+	hook := sqlHook{logger: logger.Sugar()}
 	sql.Register(hook.driverName(), hook.driver())
 
 	return hook
 }
 
 type sqlHook struct {
-	logger *zap.SugaredLogger
+	logger *appLogger.SugaredLogger
 }
 
 func (h *sqlHook) driver() driver.Driver {

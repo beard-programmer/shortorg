@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/core"
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 )
 
 type TokenKeysPostgresError struct {
@@ -21,16 +21,21 @@ func (e TokenKeysPostgresError) Error() string {
 
 type TokenKeyStore struct {
 	postgresClient *sqlx.DB
-	logger         *zap.Logger
+	logger         *logger.AppLogger
 	bufferChan     chan core.TokenKey
 	errChan        chan error
 }
 
-func NewTokenKeyStore(ctx context.Context, postgresClient *sqlx.DB, logger *zap.Logger, bufferSize int) (*TokenKeyStore, error) {
+func NewTokenKeyStore(
+	ctx context.Context,
+	logger *logger.AppLogger,
+	postgresClient *sqlx.DB,
+	config tokenStoreConfig,
+) (*TokenKeyStore, error) {
 	if postgresClient == nil {
 		return nil, errors.New("postgresClient is nil")
 	}
-	bufferChan := make(chan core.TokenKey, bufferSize)
+	bufferChan := make(chan core.TokenKey, config.BufferSize)
 	errChan := make(chan error, 1)
 	store := TokenKeyStore{
 		postgresClient, logger, bufferChan, errChan,

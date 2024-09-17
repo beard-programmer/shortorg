@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/core"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/jmoiron/sqlx"
@@ -23,19 +24,20 @@ func (e encodedURLProviderPostgresError) Error() string {
 
 type EncodedURLStore struct {
 	postgresClient *sqlx.DB
-	cache          Cache
+	cache          Cache[string]
+	logger         *logger.AppLogger
 }
 
-type Cache interface {
-	Get(context.Context, any) (string, error)
-	Set(context.Context, any, string) error
+type Cache[T any] interface {
+	Get(context.Context, any) (T, error)
+	Set(context.Context, any, T) error
 }
 
-func NewEncodedURLStore(db *sqlx.DB, c Cache) (*EncodedURLStore, error) {
-	if db == nil {
+func NewEncodedURLStore(postgresClient *sqlx.DB, cache Cache[string], logger *logger.AppLogger) (*EncodedURLStore, error) {
+	if postgresClient == nil {
 		return nil, errors.New("postgresClient is nil")
 	}
-	return &EncodedURLStore{db, c}, nil
+	return &EncodedURLStore{postgresClient, cache, logger}, nil
 }
 
 func (s *EncodedURLStore) FindOne(ctx context.Context, key core.TokenKey) (string, bool, error) {

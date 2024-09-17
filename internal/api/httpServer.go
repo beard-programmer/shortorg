@@ -9,11 +9,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beard-programmer/shortorg/internal/decode"
-	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+
+	"github.com/beard-programmer/shortorg/internal/decode"
+	"github.com/beard-programmer/shortorg/internal/encode"
 )
 
 func (s *Server) serveHTTP(ctx context.Context) error {
@@ -43,10 +44,11 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 		)
 
 		s.logger(ctx).Info("shutting down http-server")
-		shutdownErr := httpServer.Shutdown(shutdownCtx)
+		shutdownErr := httpServer.Shutdown(shutdownCtx) //nolint:contextcheck // gracefully shutdown
 		if shutdownErr != nil {
 			s.logger(ctx).Error("http shutdown error", zap.Error(shutdownErr))
 			<-shutdownCtx.Done()
+
 			s.logger(ctx).Fatal(
 				"shutting down timeout reached, stopping through Fatal",
 				zap.Duration("timeout", gracefulShutdownTimeout),
@@ -79,6 +81,7 @@ func (s *Server) getServerMux(ctx context.Context) (*chi.Mux, error) {
 			r.Post("/decode", decode.HTTPHandlerFunc(s.logger(ctx), s.decodeFn))
 		},
 	)
+
 	return mux, nil
 }
 

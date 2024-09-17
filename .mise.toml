@@ -1,2 +1,7 @@
 [tools]
 go = '1.23.1'
+
+[env]
+APP_ENV = "dev"
+APP_IS_DEBUG = false
+APP_GOMAXPROCS = 2

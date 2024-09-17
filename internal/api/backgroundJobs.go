@@ -17,10 +17,12 @@ func (s *Server) serveBackgroundJobs(ctx context.Context) {
 					"context canceled, shutting down background workers",
 					zap.Duration("timeout", gracefulShutdownTimeout),
 				)
+
 				return
 			case err, ok := <-encodeURLChan:
 				if !ok {
 					s.logger(ctx).Error("error channel is closes for worker", zap.Error(err))
+
 					return
 				}
 				if err != nil {

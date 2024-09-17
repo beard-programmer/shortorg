@@ -16,9 +16,7 @@ func main() {
 		panic(err)
 	}
 
-	application := app.New(zapLogger)
-
-	err = application.Setup(context.Background())
+	application, err := app.New(context.Background(), zapLogger)
 	if err != nil {
 		zapLogger.Fatal("application setup error", zap.Error(err))
 	}

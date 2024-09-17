@@ -3,22 +3,21 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
-	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/beard-programmer/shortorg/internal/base58"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgresClients"
+	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgres"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/spf13/viper"
 )
 
-func (app *App) Setup(ctx context.Context) error {
+func (app *App) setup(ctx context.Context) error {
 	err := app.setupConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("setup config: %w", err)
@@ -36,7 +35,7 @@ func (app *App) Setup(ctx context.Context) error {
 		return fmt.Errorf("setup cache: %w", err)
 	}
 
-	err = app.setupEncodedUrlStore(ctx)
+	err = app.setupEncodedURLStore(ctx)
 	if err != nil {
 		return fmt.Errorf("setup encoded url store: %w", err)
 	}
@@ -59,36 +58,36 @@ func (app *App) Setup(ctx context.Context) error {
 	return nil
 }
 
-func (app *App) setupConfig(ctx context.Context) error {
-	var c Config
+func (app *App) setupConfig(_ context.Context) error {
 
-	_, err := toml.DecodeFile("./config/config.dev.toml", &c)
-	if err != nil {
+	env := os.Getenv("APP_ENV")
+	viperConfig := viper.New()
+
+	viperConfig.SetConfigType("toml")
+	viperConfig.AddConfigPath("./config/")
+	viperConfig.SetConfigName(fmt.Sprintf("application.%s", env))
+
+	if err := viperConfig.ReadInConfig(); err != nil {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
-	var envConfig Config
-	err = envconfig.Process("", &envConfig)
-	if err != nil {
-		return fmt.Errorf("error processing environment variables: %w", err)
-	}
+	var cfg config
 
-	if envConfig.isProdEnv() {
-		c = envConfig
-	} else {
-		app.logger.Sugar().Infow("Configs set up", "config", c)
+	if err := viperConfig.Unmarshal(&cfg); err != nil {
+		return fmt.Errorf("unable to decode into struct: %w", err)
 	}
+	app.logger.Sugar().Infow("Configs set up", "config", cfg)
 
-	app.config = c
+	app.config = cfg
 
 	return nil
 }
 
 func (app *App) setupPostgresClients(ctx context.Context) error {
-	clients, err := postgresClients.New(
+	clients, err := postgres.New(
 		ctx,
 		app.logger,
-		app.config.PostgresClientsConfig,
+		app.config.PostgresClients,
 		app.Name(),
 		app.config.isProdEnv(),
 	)
@@ -100,22 +99,24 @@ func (app *App) setupPostgresClients(ctx context.Context) error {
 	return nil
 }
 
-func (app *App) setupCache(ctx context.Context) error {
+func (app *App) setupCache(_ context.Context) error {
 	if !app.config.UseCache {
 		app.cache = &cache.MockCache[string]{}
+
 		return nil
 	}
 
-	inMemory, err := cache.NewInMemory[string](app.config.CacheConfig)
+	inMemory, err := cache.NewInMemory[string](app.config.Cache)
 	if err != nil {
 		return fmt.Errorf("setupCache: %w", err)
 	}
 
 	app.cache = inMemory
+
 	return nil
 }
 
-func (app *App) setupEncodedUrlStore(ctx context.Context) error {
+func (app *App) setupEncodedURLStore(_ context.Context) error {
 	store, err := infrastructure.NewEncodedURLStore(app.postgresClients.ShortorgClient, app.cache)
 	if err != nil {
 		return fmt.Errorf("setupEncodedUrlStore: %w", err)
@@ -125,15 +126,21 @@ func (app *App) setupEncodedUrlStore(ctx context.Context) error {
 }
 
 func (app *App) setupTokenKeyStore(ctx context.Context) error {
-	store, err := infrastructure.NewTokenKeyStore(ctx, app.postgresClients.TokenIdentifierClient, app.logger, 10000)
+	store, err := infrastructure.NewTokenKeyStore(
+		ctx,
+		app.postgresClients.TokenIdentifierClient,
+		app.logger,
+		app.config.TokenKeyStoreBuffer,
+	)
 	if err != nil {
 		return fmt.Errorf("setupTokenKeyStore: %w", err)
 	}
 	app.tokenKeyStore = store
+
 	return nil
 }
 
-func (app *App) setupUseCaseFns(ctx context.Context) error {
+func (app *App) setupUseCaseFns(_ context.Context) error { //nolint:unparam // error in the future
 	app.urlWasEncodedChan = make(chan encode.UrlWasEncoded, app.config.EncodedUrlsQueSize)
 	app.encodeFn = encode.NewEncodeFn(
 		app.tokenKeyStore,
@@ -143,16 +150,16 @@ func (app *App) setupUseCaseFns(ctx context.Context) error {
 		app.urlWasEncodedChan,
 	)
 	app.decodeFn = decode.NewDecodeFn(app.logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, app.encodedURLStore)
+
 	return nil
 }
 
-func (app *App) setupEventHandlers(ctx context.Context) error {
+func (app *App) setupEventHandlers(_ context.Context) error { //nolint:unparam // error in the future
 	app.urlWasEncodedHandler = encodeInfrastructure.NewUrlWasEncodedHandler(
 		app.logger,
 		app.encodedURLStore,
-		10000,
+		app.config.EncodedUrlsQueSize,
 		1,
-		250*time.Millisecond,
 		app.urlWasEncodedChan,
 	)
 	return nil

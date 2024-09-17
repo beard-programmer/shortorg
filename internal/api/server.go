@@ -18,7 +18,7 @@ const (
 type Server struct {
 	encodeFn             encode.Fn
 	decodeFn             decode.Fn
-	urlWasEncodedHandler infrastructure.UrlWasEncodedHandlerFn
+	urlWasEncodedHandler infrastructure.URLWasEncodedHandlerFn
 	config               Config
 
 	serverName string
@@ -28,7 +28,7 @@ type Server struct {
 func New(
 	encodeFn encode.Fn,
 	decodeFn decode.Fn,
-	urlWasEncodedHandler infrastructure.UrlWasEncodedHandlerFn,
+	urlWasEncodedHandler infrastructure.URLWasEncodedHandlerFn,
 	zapLogger *zap.Logger,
 	config Config,
 	serverName string,
@@ -44,21 +44,21 @@ func New(
 }
 
 func (s *Server) Serve(ctx context.Context) error {
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
+	serveWg := new(sync.WaitGroup)
+	serveWg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer serveWg.Done()
 		s.serveBackgroundJobs(ctx)
 	}()
 
-	wg.Add(1)
+	serveWg.Add(1)
 	var serveHTTPErr error
 	go func() {
-		defer wg.Done()
+		defer serveWg.Done()
 		serveHTTPErr = s.serveHTTP(ctx)
 	}()
 
-	wg.Wait()
+	serveWg.Wait()
 
 	if serveHTTPErr != nil {
 		return serveHTTPErr

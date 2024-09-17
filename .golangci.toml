@@ -95,7 +95,7 @@ ignored-functions = [
 max-func-lines = 0
 
 [linters-settings.nolintlint]
-allow-no-explanation = ["funlen", "gocognit", "lll"]
+allow-no-explanation = ["funlen", "gocognit", "lll", "exhaustruct"]
 require-explanation = true
 require-specific = true
 
@@ -124,7 +124,6 @@ enable = [
     "err113",
     "importas",
     "misspell",
-    "nlreturn",
     "tagliatelle",
     "varnamelen",
     "contextcheck",
@@ -132,7 +131,6 @@ enable = [
     "gosimple",
     "govet",
     "gofmt",
-    "gofumpt",
     "ineffassign",
     "staticcheck",
     "typecheck",

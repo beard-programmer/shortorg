@@ -6,5 +6,6 @@
       <scope name="All Changed Files" level="WARNING" enabled="true" />
     </inspection_tool>
     <inspection_tool class="GoUnnecessarilyExportedIdentifiers" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
+    <inspection_tool class="GoUnsortedImport" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
   </profile>
 </component>

@@ -1,0 +1,34 @@
+Env = "dev"
+TokenKeyStoreBuffer = 10
+EncodedUrlsQueSize = 10000
+Concurrency = 2
+IsDebug = false
+UseCache = false
+
+[APIServer]
+Host = "localhost"
+
+[APIServer.HTTP]
+InternalPort = 8080
+
+[PostgresClients.TokenIdentifier]
+User = "identity"
+Password = "identity"
+Host = "localhost"
+DBName = "identity"
+Port = 5434
+MaxConnections = 4
+MaxIdleConnections = 4
+
+[PostgresClients.ShortOrg]
+User = "shortorg"
+Password = "shortorg"
+Host = "localhost"
+DBName = "shortorg"
+Port = 5432
+MaxConnections = 40
+MaxIdleConnections = 40
+
+[Cache]
+MaxNumberOfElements = 100000
+MaxMbSize = 512

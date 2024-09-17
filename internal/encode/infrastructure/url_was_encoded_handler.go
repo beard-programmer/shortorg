@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type UrlWasEncodedHandlerFn = func(ctx context.Context) <-chan error
+type URLWasEncodedHandlerFn = func(ctx context.Context) <-chan error
 
 type BatchSave interface {
 	SaveMany(context.Context, []encode.UrlWasEncoded) error
@@ -20,9 +20,9 @@ func NewUrlWasEncodedHandler(
 	store BatchSave,
 	batchSize int,
 	concurrency int,
-	tickerDuration time.Duration,
 	TChan <-chan encode.UrlWasEncoded,
-) UrlWasEncodedHandlerFn {
+) URLWasEncodedHandlerFn {
+	retryPeriod := time.Duration(1+batchSize/40) * time.Millisecond
 	return func(ctx context.Context) <-chan error {
 
 		errChan := make(chan error, concurrency+1)
@@ -45,7 +45,7 @@ func NewUrlWasEncodedHandler(
 
 			go func() {
 				defer wg.Done()
-				ticker := time.NewTicker(tickerDuration)
+				ticker := time.NewTicker(retryPeriod)
 
 				var batch []encode.UrlWasEncoded
 				for {
@@ -73,7 +73,7 @@ func NewUrlWasEncodedHandler(
 							}
 							batch = nil
 						}
-						ticker.Reset(tickerDuration)
+						ticker.Reset(retryPeriod)
 					case <-ticker.C:
 						if 0 < len(batch) {
 							err := process(ctx, batch)
@@ -83,7 +83,7 @@ func NewUrlWasEncodedHandler(
 							}
 							batch = nil
 						}
-						ticker.Reset(tickerDuration)
+						ticker.Reset(retryPeriod)
 					case <-ctx.Done():
 						if 0 < len(batch) {
 							logger.Info("Context canceled, processing remaining batch before shutdown")
@@ -95,7 +95,6 @@ func NewUrlWasEncodedHandler(
 						}
 						logger.Info("NewUrlWasEncodedHandler shut down gracefully")
 						return
-
 					}
 				}
 			}()

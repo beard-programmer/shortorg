@@ -93,7 +93,7 @@ func NewUrlWasEncodedHandler(
 								return
 							}
 						}
-						logger.Info("NewUrlWasEncodedHandler shut down gracefully")
+						logger.WarnContext(ctx, "NewUrlWasEncodedHandler shut down gracefully")
 						return
 					}
 				}

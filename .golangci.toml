@@ -11,30 +11,6 @@ check-type-assertions = true
 [linters-settings.exhaustive]
 check = ["switch", "map"]
 
-[linters-settings.exhaustruct]
-exclude = [
-    "^net/http.Client$",
-    "^net/http.Cookie$",
-    "^net/http.Request$",
-    "^net/http.Response$",
-    "^net/http.Server$",
-    "^net/http.Transport$",
-    "^net/url.URL$",
-    "^os/exec.Cmd$",
-    "^reflect.StructField$",
-    "^github.com/Shopify/sarama.Config$",
-    "^github.com/Shopify/sarama.ProducerMessage$",
-    "^github.com/mitchellh/mapstructure.DecoderConfig$",
-    "^github.com/prometheus/client_golang/.+Opts$",
-    "^github.com/spf13/cobra.Command$",
-    "^github.com/spf13/cobra.CompletionOptions$",
-    "^github.com/stretchr/testify/mock.Mock$",
-    "^github.com/testcontainers/testcontainers-go.+Request$",
-    "^github.com/testcontainers/testcontainers-go.FromDockerfile$",
-    "^golang.org/x/tools/go/analysis.Analyzer$",
-    "^google.golang.org/protobuf/.+Options$",
-    "^gopkg.in/yaml.v3.Node$"
-]
 
 [linters-settings.funlen]
 lines = 100
@@ -95,7 +71,7 @@ ignored-functions = [
 max-func-lines = 0
 
 [linters-settings.nolintlint]
-allow-no-explanation = ["funlen", "gocognit", "lll", "exhaustruct"]
+allow-no-explanation = ["funlen", "gocognit", "lll"]
 require-explanation = true
 require-specific = true
 
@@ -200,7 +176,6 @@ enable = [
     "wastedassign",
     "whitespace",
     "decorder",
-    "exhaustruct",
     "gci",
     "godox",
     "goheader",

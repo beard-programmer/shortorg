@@ -12,7 +12,7 @@ import (
 type URLWasEncodedHandlerFn = func(ctx context.Context) <-chan error
 
 type BatchSave interface {
-	SaveMany(context.Context, []encode.UrlWasEncoded) error
+	SaveMany(context.Context, []encode.URLWasEncoded) error
 }
 
 func NewUrlWasEncodedHandler(
@@ -20,14 +20,14 @@ func NewUrlWasEncodedHandler(
 	store BatchSave,
 	batchSize int,
 	concurrency int,
-	TChan <-chan encode.UrlWasEncoded,
+	TChan <-chan encode.URLWasEncoded,
 ) URLWasEncodedHandlerFn {
 	retryPeriod := time.Duration(1+batchSize/40) * time.Millisecond
 	return func(ctx context.Context) <-chan error {
 
 		errChan := make(chan error, concurrency+1)
 
-		process := func(ctx context.Context, batch []encode.UrlWasEncoded) error {
+		process := func(ctx context.Context, batch []encode.URLWasEncoded) error {
 			err := store.SaveMany(ctx, batch)
 			if err != nil {
 				select {
@@ -47,7 +47,7 @@ func NewUrlWasEncodedHandler(
 				defer wg.Done()
 				ticker := time.NewTicker(retryPeriod)
 
-				var batch []encode.UrlWasEncoded
+				var batch []encode.URLWasEncoded
 				for {
 					select {
 					case element, ok := <-TChan:

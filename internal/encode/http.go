@@ -52,11 +52,11 @@ func HttpHandlerFunc(
 		}
 
 		response := APIResponse{
-			URL: urlWasEncoded.Token.OriginalURL.String(),
+			URL: urlWasEncoded.NonBrandedLink.OriginalURL.String(),
 			ShortURL: fmt.Sprintf(
 				"https://%s/%s",
-				urlWasEncoded.Token.Host.Hostname(),
-				urlWasEncoded.Token.Slug.Value(),
+				urlWasEncoded.NonBrandedLink.Host.Hostname(),
+				urlWasEncoded.NonBrandedLink.Slug.Value(),
 			),
 		}
 		httpEncoder.EncodeResponse(w, r, http.StatusOK, response)

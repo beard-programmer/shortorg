@@ -36,6 +36,29 @@ func NewEncodedURLStore(postgresClient *sqlx.DB, cache Cache[string], logger *lo
 	return &EncodedURLStore{postgresClient, cache, logger}, nil
 }
 
+func (s *EncodedURLStore) FindOneNonBrandedLink(ctx context.Context, key core.LinkKey, host core.LinkHost) (*core.NonBrandedLink, bool, error) {
+	url, isFound, err := s.FindOne(ctx, key)
+	if err != nil {
+		return nil, false, err
+	}
+	if !isFound {
+		return nil, false, nil
+	}
+
+	destinationURL, err := core.DestinationURLFromString(UrlParser{}, url)
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	link, err := core.NewNonBrandedLink(key, host, *destinationURL)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return link, true, nil
+}
+
 func (s *EncodedURLStore) FindOne(ctx context.Context, key core.LinkKey) (string, bool, error) {
 	var (
 		url string
@@ -68,7 +91,7 @@ func (s *EncodedURLStore) FindOne(ctx context.Context, key core.LinkKey) (string
 	return url, true, nil
 }
 
-func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.UrlWasEncoded) error {
+func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.URLWasEncoded) error {
 	// NamedExecContext is generating invalid sql so building query manually.
 	valueStrings := make([]string, 0, len(encodedURLs))
 	valueArgs := make([]interface{}, 0, len(encodedURLs)*3) //nolint:mnd // _
@@ -79,9 +102,9 @@ func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.Url
 		)
 		valueArgs = append(
 			valueArgs,
-			encodedURL.Token.Key.Value(),
-			encodedURL.Token.Slug.Value(),
-			encodedURL.Token.OriginalURL.String(),
+			encodedURL.NonBrandedLink.Key.Value(),
+			encodedURL.NonBrandedLink.Slug.Value(),
+			encodedURL.NonBrandedLink.OriginalURL.String(),
 		)
 	}
 
@@ -96,9 +119,9 @@ func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.Url
 	}
 
 	for _, encodedURL := range encodedURLs {
-		key := encodedURL.Token.Key.Value()
-		url := encodedURL.Token.OriginalURL.String()
-		err = s.cache.Set(ctx, encodedURL.Token.Key.Value(), encodedURL.Token.OriginalURL.String())
+		key := encodedURL.NonBrandedLink.Key.Value()
+		url := encodedURL.NonBrandedLink.OriginalURL.String()
+		err = s.cache.Set(ctx, encodedURL.NonBrandedLink.Key.Value(), encodedURL.NonBrandedLink.OriginalURL.String())
 		if err != nil {
 			s.logger.WarnContext(ctx, fmt.Sprintf("SaveMany: Error storing in cache key %v value %v", key, url))
 		}

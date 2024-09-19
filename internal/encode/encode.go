@@ -8,19 +8,19 @@ import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type UrlWasEncoded struct {
-	Token core.NonBrandedLink
+type URLWasEncoded struct {
+	NonBrandedLink core.NonBrandedLink
 }
 
-type Fn = func(context.Context, EncodingRequest) (*UrlWasEncoded, error)
+type Fn = func(context.Context, EncodingRequest) (*URLWasEncoded, error)
 
 func NewEncodeFn(
 	tokenKeyStore LinkKeyStore,
 	urlParser URLParser,
 	logger *appLogger.AppLogger,
-	urlWasEncodedChan chan<- UrlWasEncoded,
+	urlWasEncodedChan chan<- URLWasEncoded,
 ) Fn {
-	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
+	return func(ctx context.Context, r EncodingRequest) (*URLWasEncoded, error) {
 		return encode(ctx, tokenKeyStore, urlParser, logger, urlWasEncodedChan, r)
 	}
 }
@@ -51,12 +51,12 @@ func (e ApplicationError) Error() string {
 
 func encode(
 	ctx context.Context,
-	keyIssuer LinkKeyStore,
+	linkKeyStore LinkKeyStore,
 	urlParser URLParser,
 	logger *appLogger.AppLogger,
-	urlWasEncodedChan chan<- UrlWasEncoded,
+	urlWasEncodedChan chan<- URLWasEncoded,
 	request EncodingRequest,
-) (*UrlWasEncoded, error) {
+) (*URLWasEncoded, error) {
 	validatedRequest, err := NewValidatedRequest(
 		urlParser,
 		request,
@@ -66,7 +66,7 @@ func encode(
 		return nil, ValidationError{Err: err}
 	}
 
-	unclaimedKey, err := keyIssuer.Issue(ctx)
+	unclaimedKey, err := linkKeyStore.Issue(ctx)
 	if err != nil {
 		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate unclaimedKey: %w", err)}
 	}
@@ -77,7 +77,7 @@ func encode(
 		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}
 	}
 
-	event := UrlWasEncoded{*token}
+	event := URLWasEncoded{*token}
 	go func() {
 		urlWasEncodedChan <- event
 	}()

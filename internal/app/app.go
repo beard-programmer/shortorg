@@ -65,7 +65,7 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 		return nil, fmt.Errorf("app.ConnectToPostgresClients: setup token key store: %w", err)
 	}
 
-	urlWasEncodedChan := make(chan encode.UrlWasEncoded, cfg.EncodedUrlsQueSize)
+	urlWasEncodedChan := make(chan encode.URLWasEncoded, cfg.EncodedUrlsQueSize)
 	encodeFn := encode.NewEncodeFn(tokenStore, infrastructure.UrlParser{}, logger, urlWasEncodedChan)
 	decodeFn := decode.NewDecodeFn(logger, decodeInfrastructure.UrlParser{}, encodedURLStore)
 

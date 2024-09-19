@@ -41,7 +41,7 @@ func decode(
 
 	shortURL := validatedRequest.ShortURL
 
-	tokenKey, err := core.NewLinkKeyFromLinkSlug(shortURL.KeyEncoded)
+	tokenKey, err := core.NewLinkKeyFromLinkSlug(shortURL.linkSlug)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to validate request: %v", errValidation, err)
 	}
@@ -60,7 +60,7 @@ func decode(
 		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", errApplication, err)
 	}
 
-	token, err := core.NewNonBrandedLink(*tokenKey, shortURL.Host, *originalURL)
+	token, err := core.NewNonBrandedLink(*tokenKey, shortURL.linkHost, *originalURL)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to build token %v", errApplication, err)
 	}

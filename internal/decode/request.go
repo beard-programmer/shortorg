@@ -25,8 +25,8 @@ func newValidatedRequest(urlParser UrlParser, request decodingRequest) (*validat
 }
 
 type shortUrl struct {
-	KeyEncoded core.LinkSlug
-	Host       core.LinkHost
+	linkSlug core.LinkSlug
+	linkHost core.LinkHost
 }
 
 func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
@@ -50,6 +50,6 @@ func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
 		return nil, err
 	}
 
-	return &shortUrl{KeyEncoded: *encodedKey, Host: tokenHost}, nil
+	return &shortUrl{linkSlug: *encodedKey, linkHost: tokenHost}, nil
 
 }

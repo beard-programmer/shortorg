@@ -27,6 +27,10 @@ func (u parsedUrl) Hostname() string {
 	return u.uri.Hostname()
 }
 
+func (u parsedUrl) Path() string {
+	return u.uri.Path
+}
+
 func (u parsedUrl) String() string {
 	return u.uri.String()
 

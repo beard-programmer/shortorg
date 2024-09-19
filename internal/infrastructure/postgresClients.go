@@ -30,7 +30,7 @@ func ConnectToPostgresClients(
 	isProd bool,
 ) (*Clients, error) {
 	registeredSQLHook := registerSQLHook(logger)
-	newClientFn := func(ctx context.Context, cfg config) (*sqlx.DB, error) {
+	newClientFn := func(ctx context.Context, cfg postgresClientConfig) (*sqlx.DB, error) {
 		return newPostgresClient(ctx, logger, cfg, registeredSQLHook, appName, isProd)
 	}
 	shortOrgClient, err := newClientFn(ctx, cfg.ShortOrg)
@@ -49,7 +49,7 @@ func ConnectToPostgresClients(
 func newPostgresClient(
 	ctx context.Context,
 	logger *appLogger.AppLogger,
-	cfg config,
+	cfg postgresClientConfig,
 	registeredSQLHook sqlHook,
 	appName string,
 	_ bool,

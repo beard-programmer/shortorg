@@ -6,8 +6,19 @@ type Config struct {
 	TokenStore      tokenStoreConfig      `mapstructure:"TokenStore"`
 }
 
-type tokenStoreConfig struct {
-	BufferSize int
+type postgresClientsConfig struct {
+	TokenIdentifier postgresClientConfig `mapstructure:"TokenIdentifier"`
+	ShortOrg        postgresClientConfig `mapstructure:"ShortOrg"`
+}
+
+type postgresClientConfig struct {
+	User               string
+	Password           string
+	Host               string
+	DBName             string
+	Port               int
+	MaxConnections     int
+	MaxIdleConnections int
 }
 
 type cacheConfig struct {
@@ -16,17 +27,6 @@ type cacheConfig struct {
 	MaxMbSize           int64
 }
 
-type postgresClientsConfig struct {
-	TokenIdentifier config `mapstructure:"TokenIdentifier"`
-	ShortOrg        config `mapstructure:"ShortOrg"`
-}
-
-type config struct {
-	User               string
-	Password           string
-	Host               string
-	DBName             string
-	Port               int
-	MaxConnections     int
-	MaxIdleConnections int
+type tokenStoreConfig struct {
+	BufferSize int
 }

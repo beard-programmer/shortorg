@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	apiServer "github.com/beard-programmer/shortorg/internal/api"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgres"
+	"github.com/beard-programmer/shortorg/internal/infrastructure"
 	"github.com/spf13/viper"
 )
 
@@ -15,10 +13,8 @@ type config struct {
 	EncodedUrlsQueSize int
 	Concurrency        int
 	IsDebug            bool
-	PostgresClients    postgres.ClientsConfig `mapstructure:"PostgresClients"`
-	Cache              cache.Config           `mapstructure:"Cache"`
-	Infrastructure     infrastructure.Config  `mapstructure:"Infrastructure"`
-	APIServer          apiServer.Config       `mapstructure:"APIServer"`
+	Infrastructure     infrastructure.Config `mapstructure:"Infrastructure"`
+	APIServer          apiServer.Config      `mapstructure:"APIServer"`
 }
 
 func (config) load(env string) (*config, error) {

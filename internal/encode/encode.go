@@ -9,20 +9,19 @@ import (
 )
 
 type UrlWasEncoded struct {
-	Token core.TokenStandard
+	Token core.NonBrandedLink
 }
 
 type Fn = func(context.Context, EncodingRequest) (*UrlWasEncoded, error)
 
 func NewEncodeFn(
-	tokenKeyStore TokenKeyStore,
-	urlParser UrlParser,
-	codec Encoder,
+	tokenKeyStore LinkKeyStore,
+	urlParser URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 ) Fn {
 	return func(ctx context.Context, r EncodingRequest) (*UrlWasEncoded, error) {
-		return encode(ctx, tokenKeyStore, urlParser, codec, logger, urlWasEncodedChan, r)
+		return encode(ctx, tokenKeyStore, urlParser, logger, urlWasEncodedChan, r)
 	}
 }
 
@@ -52,9 +51,8 @@ func (e ApplicationError) Error() string {
 
 func encode(
 	ctx context.Context,
-	keyIssuer TokenKeyStore,
-	urlParser UrlParser,
-	codec Encoder,
+	keyIssuer LinkKeyStore,
+	urlParser URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- UrlWasEncoded,
 	request EncodingRequest,
@@ -73,7 +71,7 @@ func encode(
 		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate unclaimedKey: %w", err)}
 	}
 
-	token, err := core.NewToken(codec, *unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
+	token, err := core.NewNonBrandedLink(*unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
 		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}

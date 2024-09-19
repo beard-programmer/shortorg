@@ -25,8 +25,8 @@ func newValidatedRequest(urlParser UrlParser, request decodingRequest) (*validat
 }
 
 type shortUrl struct {
-	KeyEncoded core.TokenKeyEncoded
-	Host       core.TokenHost
+	KeyEncoded core.LinkSlug
+	Host       core.LinkHost
 }
 
 func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
@@ -40,12 +40,12 @@ func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
 		return nil, fmt.Errorf("invalid ShortUrl scheme: %s", scheme)
 	}
 	hostname := uri.Hostname()
-	tokenHost, err := core.TokenHostFromString(&hostname)
+	tokenHost, err := core.LinkHostFromString(&hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	encodedKey, err := core.TokenKeyEncoded{}.New(uri.Path()[1:])
+	encodedKey, err := core.NewLinkSlug(uri.Path()[1:])
 	if err != nil {
 		return nil, err
 	}

@@ -12,17 +12,17 @@ type EncodingRequest interface {
 }
 
 type ValidatedRequest struct {
-	OriginalURL core.OriginalURL
-	TokenHost   core.TokenHost
+	OriginalURL core.DestinationURL
+	TokenHost   core.LinkHost
 }
 
-func NewValidatedRequest(urlParser UrlParser, request EncodingRequest) (*ValidatedRequest, error) {
-	originalUrl, err := core.OriginalURLFromString(urlParser, request.OriginalUrl())
+func NewValidatedRequest(urlParser URLParser, request EncodingRequest) (*ValidatedRequest, error) {
+	originalUrl, err := core.DestinationURLFromString(urlParser, request.OriginalUrl())
 	if err != nil {
 		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}
 
-	tokenHost, err := core.TokenHostFromString(request.Host())
+	tokenHost, err := core.LinkHostFromString(request.Host())
 	if err != nil {
 		return nil, err
 	}

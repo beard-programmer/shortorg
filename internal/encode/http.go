@@ -11,7 +11,7 @@ import (
 
 type APIRequest struct {
 	URL          string  `json:"url"`
-	EncodeAtHost *string `json:"encode_at_host"`
+	EncodeAtHost *string `json:"encodeAt_host"`
 }
 
 func (r APIRequest) OriginalUrl() string {
@@ -52,8 +52,12 @@ func HttpHandlerFunc(
 		}
 
 		response := APIResponse{
-			URL:      urlWasEncoded.Token.OriginalURL.String(),
-			ShortURL: fmt.Sprintf("https://%s/%s", urlWasEncoded.Token.Host.Hostname(), urlWasEncoded.Token.KeyEncoded.Value()),
+			URL: urlWasEncoded.Token.OriginalURL.String(),
+			ShortURL: fmt.Sprintf(
+				"https://%s/%s",
+				urlWasEncoded.Token.Host.Hostname(),
+				urlWasEncoded.Token.Slug.Value(),
+			),
 		}
 		httpEncoder.EncodeResponse(w, r, http.StatusOK, response)
 	}
@@ -70,11 +74,23 @@ func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.As(err, &validationErr):
 		apiErr = APIErrResponse{Code: "ValidationError", Message: err.Error(), httpStatusCode: http.StatusBadRequest}
 	case errors.As(err, &applicationErr):
-		apiErr = APIErrResponse{Code: "ApplicationError", Message: err.Error(), httpStatusCode: http.StatusUnprocessableEntity}
+		apiErr = APIErrResponse{
+			Code:           "ApplicationError",
+			Message:        err.Error(),
+			httpStatusCode: http.StatusUnprocessableEntity,
+		}
 	case errors.As(err, &infrastructureErr):
-		apiErr = APIErrResponse{Code: "InfrastructureError", Message: err.Error(), httpStatusCode: http.StatusServiceUnavailable}
+		apiErr = APIErrResponse{
+			Code:           "InfrastructureError",
+			Message:        err.Error(),
+			httpStatusCode: http.StatusServiceUnavailable,
+		}
 	default:
-		apiErr = APIErrResponse{Code: "UnknownError", Message: err.Error(), httpStatusCode: http.StatusInternalServerError}
+		apiErr = APIErrResponse{
+			Code:           "UnknownError",
+			Message:        err.Error(),
+			httpStatusCode: http.StatusInternalServerError,
+		}
 	}
 
 	httpEncoder.EncodeResponse(w, r, apiErr.httpStatusCode, apiErr)

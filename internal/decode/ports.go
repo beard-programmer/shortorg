@@ -6,17 +6,8 @@ import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type Codec interface {
-	core.Encoder
-	Decoder
-}
-
-type Decoder interface {
-	Decode(string) (int64, error)
-}
-
 type EncodedUrlsProvider interface {
-	FindOne(context.Context, core.TokenKey) (string, bool, error)
+	FindOne(context.Context, core.LinkKey) (string, bool, error)
 }
 
 type EncodedUrlDto interface {

@@ -58,7 +58,7 @@ func HTTPHandlerFunc(
 			ShortURL: fmt.Sprintf(
 				"https://%s/%s",
 				urlWasDecoded.Token.Host.Hostname(),
-				urlWasDecoded.Token.KeyEncoded.Value(),
+				urlWasDecoded.Token.Slug.Value(),
 			),
 		}
 		httpEncoder.EncodeResponse(writer, request, http.StatusOK, response)

@@ -10,7 +10,7 @@ import (
 )
 
 type urlWasDecoded struct {
-	Token core.TokenStandard
+	Token core.NonBrandedLink
 }
 
 var (
@@ -21,33 +21,17 @@ var (
 
 type Fn = func(context.Context, decodingRequest) (*urlWasDecoded, bool, error)
 
-func NewDecodeFn(
-	logger *appLogger.AppLogger,
-	urlParser UrlParser,
-	codec Codec,
-	encodedUrlsProvider EncodedUrlsProvider,
-	// urlWasEncodedChan chan<- UrlWasDecoded,
-) Fn {
+func NewDecodeFn(logger *appLogger.AppLogger, urlParser UrlParser, encodedUrlsProvider EncodedUrlsProvider) Fn {
 	return func(ctx context.Context, r decodingRequest) (*urlWasDecoded, bool, error) {
-		return decode(
-			ctx,
-			logger,
-			urlParser,
-			codec,
-			encodedUrlsProvider,
-			// urlWasEncodedChan,
-			r,
-		)
+		return decode(ctx, logger, urlParser, encodedUrlsProvider, r)
 	}
 }
 
 func decode(
 	ctx context.Context,
-	_ *appLogger.AppLogger,
+	l *appLogger.AppLogger,
 	urlParser UrlParser,
-	codec Codec,
 	encodedUrlsProvider EncodedUrlsProvider,
-	// _ chan<- UrlWasDecoded,
 	request decodingRequest,
 ) (*urlWasDecoded, bool, error) {
 	validatedRequest, err := newValidatedRequest(urlParser, request)
@@ -57,7 +41,7 @@ func decode(
 
 	shortURL := validatedRequest.ShortURL
 
-	tokenKey, err := shortURL.KeyEncoded.Decode(codec)
+	tokenKey, err := core.NewLinkKeyFromLinkSlug(shortURL.KeyEncoded)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to validate request: %v", errValidation, err)
 	}
@@ -70,13 +54,13 @@ func decode(
 		return nil, isFound, nil
 	}
 
-	originalURL, err := core.OriginalURLFromString(UrlParserAdapter{urlParser}, url)
+	originalURL, err := core.DestinationURLFromString(UrlParserAdapter{urlParser}, url)
 
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", errApplication, err)
 	}
 
-	token, err := core.NewToken(codec, *tokenKey, shortURL.Host, *originalURL)
+	token, err := core.NewNonBrandedLink(*tokenKey, shortURL.Host, *originalURL)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to build token %v", errApplication, err)
 	}

@@ -1,9 +1,11 @@
 package core
 
-type Encoder interface {
-	Encode(int64) string
+type URL interface {
+	Scheme() string
+	Hostname() string
+	String() string
 }
 
-type Decoder interface {
-	Decode(string) (int64, error)
+type URLParser interface {
+	Parse(string) (URL, error)
 }

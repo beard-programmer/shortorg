@@ -1,22 +1,21 @@
-package cache
+package infrastructure
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
 	"github.com/dgraph-io/ristretto"
 	ekoCache "github.com/eko/gocache/lib/v4/cache"
 	ristrettoStore "github.com/eko/gocache/store/ristretto/v4"
 )
 
-type InMemory[T any] struct {
+type CacheInMemory[T any] struct {
 	cacheManager ekoCache.Cache[T]
 }
 
-func NewCache[T any](cfg Config) (infrastructure.Cache[T], error) {
+func NewCache[T any](cfg cacheConfig) (Cache[T], error) {
 	if !cfg.UseCache {
-		c := MockCache[T]{}
+		c := CacheMock[T]{}
 		return &c, nil
 	}
 
@@ -32,23 +31,23 @@ func NewCache[T any](cfg Config) (infrastructure.Cache[T], error) {
 	}
 	rStore := ristrettoStore.NewRistretto(ristrettoCache)
 	cacheManager := ekoCache.New[T](rStore)
-	return &InMemory[T]{*cacheManager}, nil
+	return &CacheInMemory[T]{*cacheManager}, nil
 }
 
-func (c *InMemory[T]) Get(ctx context.Context, key any) (T, error) {
+func (c *CacheInMemory[T]) Get(ctx context.Context, key any) (T, error) {
 	return c.cacheManager.Get(ctx, key)
 }
 
-func (c *InMemory[T]) Set(ctx context.Context, key any, value T) error {
+func (c *CacheInMemory[T]) Set(ctx context.Context, key any, value T) error {
 	return c.cacheManager.Set(ctx, key, value)
 }
 
-type MockCache[T any] struct{}
+type CacheMock[T any] struct{}
 
-func (m *MockCache[T]) Get(_ context.Context, key any) (T, error) {
+func (m *CacheMock[T]) Get(_ context.Context, key any) (T, error) {
 	return *new(T), fmt.Errorf("not found in MOCK cache %v", key)
 }
 
-func (m *MockCache[T]) Set(_ context.Context, _ any, _ T) error {
+func (m *CacheMock[T]) Set(_ context.Context, _ any, _ T) error {
 	return nil
 }

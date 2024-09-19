@@ -1,4 +1,4 @@
-package postgres
+package infrastructure
 
 import (
 	"context"
@@ -22,10 +22,10 @@ type Clients struct {
 	ShortorgClient        *sqlx.DB
 }
 
-func ConnectToClients(
+func ConnectToPostgresClients(
 	ctx context.Context,
 	logger *appLogger.AppLogger,
-	cfg ClientsConfig,
+	cfg postgresClientsConfig,
 	appName string,
 	isProd bool,
 ) (*Clients, error) {
@@ -137,9 +137,9 @@ func (h *sqlHook) After(ctx context.Context, query string, args ...interface{}) 
 
 	duration := time.Since(startTime)
 
-	if 50*time.Millisecond < duration {
+	if 100*time.Millisecond < duration {
 		h.logger.WarnContext(ctx,
-			"Sql query took longer than 10ms",
+			"Sql query took longer than 100ms",
 			"query", query,
 			//"args", args,
 			"duration", duration,

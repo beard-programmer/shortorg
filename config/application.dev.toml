@@ -3,7 +3,21 @@ EncodedUrlsQueSize = 10000
 Concurrency = 2
 IsDebug = false
 
-[PostgresClients.TokenIdentifier]
+[APIServer]
+Host = "localhost"
+
+[APIServer.HTTP]
+InternalPort = 8080
+
+[Infrastructure.TokenStore]
+BufferSize = 1000
+
+[Infrastructure.Cache]
+UseCache = false
+MaxNumberOfElements = 1000
+MaxMbSize = 512
+
+[Infrastructure.PostgresClients.TokenIdentifier]
 User = "identity"
 Password = "identity"
 Host = "localhost"
@@ -12,7 +26,7 @@ Port = 5434
 MaxConnections = 4
 MaxIdleConnections = 4
 
-[PostgresClients.ShortOrg]
+[Infrastructure.PostgresClients.ShortOrg]
 User = "shortorg"
 Password = "shortorg"
 Host = "localhost"
@@ -20,19 +34,3 @@ DBName = "shortorg"
 Port = 5432
 MaxConnections = 40
 MaxIdleConnections = 40
-
-[Cache]
-UseCache = false
-MaxNumberOfElements = 100000
-MaxMbSize = 512
-
-[Infrastructure.TokenStore]
-BufferSize = 1000
-
-[APIServer]
-Host = "localhost"
-
-[APIServer.HTTP]
-InternalPort = 8080
-
-

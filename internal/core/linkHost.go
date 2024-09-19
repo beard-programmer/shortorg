@@ -2,13 +2,13 @@ package core
 
 import "fmt"
 
-type TokenHost interface {
+type LinkHost interface {
 	Hostname() string
 }
 
-func TokenHostFromString(host *string) (TokenHost, error) {
+func LinkHostFromString(host *string) (LinkHost, error) {
 	if host == nil || *host == "" || *host == standardTokenHost {
-		return &tokenHostStandard{}, nil
+		return &linkHostStandard{}, nil
 	}
 
 	return nil, fmt.Errorf("token host %v is not supported", *host)
@@ -16,8 +16,8 @@ func TokenHostFromString(host *string) (TokenHost, error) {
 
 const standardTokenHost = "shortl.org"
 
-type tokenHostStandard struct{}
+type linkHostStandard struct{}
 
-func (t *tokenHostStandard) Hostname() string {
+func (t *linkHostStandard) Hostname() string {
 	return standardTokenHost
 }

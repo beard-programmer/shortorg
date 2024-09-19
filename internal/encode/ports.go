@@ -6,14 +6,10 @@ import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type TokenKeyStore interface {
-	Issue(ctx context.Context) (*core.TokenKey, error)
+type LinkKeyStore interface {
+	Issue(ctx context.Context) (*core.LinkKey, error)
 }
 
-type UrlParser interface {
-	core.UrlParser
-}
-
-type Encoder interface {
-	core.Encoder
+type URLParser interface {
+	core.URLParser
 }

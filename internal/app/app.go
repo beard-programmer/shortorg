@@ -8,14 +8,11 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/api"
 	"github.com/beard-programmer/shortorg/internal/app/logger"
-	"github.com/beard-programmer/shortorg/internal/base58"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure/cache"
-	"github.com/beard-programmer/shortorg/internal/core/infrastructure/postgres"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
+	"github.com/beard-programmer/shortorg/internal/infrastructure"
 )
 
 type App struct {
@@ -30,55 +27,47 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 	env := os.Getenv("APP_ENV")
 	cfg, err := config{}.load(env)
 	if err != nil {
-		return nil, fmt.Errorf("app.ConnectToClients: setup cfg: %w", err)
+		return nil, fmt.Errorf("app.ConnectToPostgresClients: setup cfg: %w", err)
 	}
 
-	logger.InfoContext(ctx, "app.ConnectToClients: cfg was set up", "cfg", cfg)
+	logger.InfoContext(ctx, "app.ConnectToPostgresClients: cfg was set up", "cfg", cfg)
 
 	_ = runtime.GOMAXPROCS(cfg.Concurrency)
 
-	clients, err := postgres.ConnectToClients(
+	postgresClients, err := infrastructure.ConnectToPostgresClients(
 		ctx,
 		logger,
-		cfg.PostgresClients,
+		cfg.Infrastructure.PostgresClients,
 		Name(),
 		cfg.isProdEnv(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("app.ConnectToClients: setup postgres clients: %w", err)
+		return nil, fmt.Errorf("app.ConnectToPostgresClients: setup postgres clients: %w", err)
 	}
 
-	postgresClients := clients
-
-	encodedUrlCache, err := cache.NewCache[string](cfg.Cache)
+	encodedURLCache, err := infrastructure.NewCache[string](cfg.Infrastructure.Cache)
 	if err != nil {
-		return nil, fmt.Errorf("app.ConnectToClients: setupEncodedURLStore: %w", err)
+		return nil, fmt.Errorf("app.ConnectToPostgresClients: setupEncodedURLStore: %w", err)
 	}
 
-	encodedURLStore, err := infrastructure.NewEncodedURLStore(postgresClients.ShortorgClient, encodedUrlCache, logger)
+	encodedURLStore, err := infrastructure.NewEncodedURLStore(postgresClients.ShortorgClient, encodedURLCache, logger)
 	if err != nil {
-		return nil, fmt.Errorf("app.ConnectToClients: setupEncodedUrlStore: %w", err)
+		return nil, fmt.Errorf("app.ConnectToPostgresClients: setupEncodedUrlStore: %w", err)
 	}
 
-	tokenStore, err := infrastructure.NewTokenKeyStore(
+	tokenStore, err := infrastructure.NewLinkKeyStore(
 		ctx,
 		logger,
 		postgresClients.TokenIdentifierClient,
 		cfg.Infrastructure.TokenStore,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("app.ConnectToClients: setup token key store: %w", err)
+		return nil, fmt.Errorf("app.ConnectToPostgresClients: setup token key store: %w", err)
 	}
 
 	urlWasEncodedChan := make(chan encode.UrlWasEncoded, cfg.EncodedUrlsQueSize)
-	encodeFn := encode.NewEncodeFn(
-		tokenStore,
-		infrastructure.UrlParser{},
-		base58.Codec{},
-		logger,
-		urlWasEncodedChan,
-	)
-	decodeFn := decode.NewDecodeFn(logger, decodeInfrastructure.UrlParser{}, base58.Codec{}, encodedURLStore)
+	encodeFn := encode.NewEncodeFn(tokenStore, infrastructure.UrlParser{}, logger, urlWasEncodedChan)
+	decodeFn := decode.NewDecodeFn(logger, decodeInfrastructure.UrlParser{}, encodedURLStore)
 
 	urlWasEncodedHandler := encodeInfrastructure.NewUrlWasEncodedHandler(
 		logger,

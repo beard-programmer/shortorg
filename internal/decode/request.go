@@ -14,7 +14,7 @@ type validatedRequest struct {
 	ShortURL shortUrl
 }
 
-func newValidatedRequest(urlParser UrlParser, request decodingRequest) (*validatedRequest, error) {
+func newValidatedRequest(urlParser core.URLParser, request decodingRequest) (*validatedRequest, error) {
 	shortURL, err := newShortUrl(urlParser, request.Url())
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ type shortUrl struct {
 	linkHost core.LinkHost
 }
 
-func newShortUrl(urlParser UrlParser, url string) (*shortUrl, error) {
+func newShortUrl(urlParser core.URLParser, url string) (*shortUrl, error) {
 	uri, err := urlParser.Parse(url)
 	if err != nil {
 		return nil, err

@@ -9,9 +9,7 @@ import (
 	"github.com/beard-programmer/shortorg/internal/api"
 	"github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/decode"
-	decodeInfrastructure "github.com/beard-programmer/shortorg/internal/decode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/encode"
-	encodeInfrastructure "github.com/beard-programmer/shortorg/internal/encode/infrastructure"
 	"github.com/beard-programmer/shortorg/internal/infrastructure"
 )
 
@@ -19,7 +17,7 @@ type App struct {
 	logger               *logger.AppLogger
 	cfg                  config
 	encodeFn             encode.Fn
-	urlWasEncodedHandler encodeInfrastructure.URLWasEncodedHandlerFn
+	urlWasEncodedHandler encode.SaveEncodedURLJob
 	decodeFn             decode.Fn
 }
 
@@ -67,9 +65,9 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 
 	urlWasEncodedChan := make(chan encode.URLWasEncoded, cfg.EncodedUrlsQueSize)
 	encodeFn := encode.NewEncodeFn(tokenStore, infrastructure.UrlParser{}, logger, urlWasEncodedChan)
-	decodeFn := decode.NewDecodeFn(logger, decodeInfrastructure.UrlParser{}, encodedURLStore)
+	decodeFn := decode.NewDecodeFn(logger, infrastructure.UrlParser{}, encodedURLStore)
 
-	urlWasEncodedHandler := encodeInfrastructure.NewUrlWasEncodedHandler(
+	urlWasEncodedHandler := encode.NewSaveEncodedURLJob(
 		logger,
 		encodedURLStore,
 		cfg.EncodedUrlsQueSize,

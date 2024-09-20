@@ -1,4 +1,4 @@
-package infrastructure
+package encode
 
 import (
 	"context"
@@ -6,28 +6,23 @@ import (
 	"time"
 
 	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
-	"github.com/beard-programmer/shortorg/internal/encode"
 )
 
-type URLWasEncodedHandlerFn = func(ctx context.Context) <-chan error
+type SaveEncodedURLJob = func(ctx context.Context) <-chan error
 
-type BatchSave interface {
-	SaveMany(context.Context, []encode.URLWasEncoded) error
-}
-
-func NewUrlWasEncodedHandler(
+func NewSaveEncodedURLJob(
 	logger *appLogger.AppLogger,
-	store BatchSave,
+	store EncodedURLStore,
 	batchSize int,
 	concurrency int,
-	TChan <-chan encode.URLWasEncoded,
-) URLWasEncodedHandlerFn {
+	tChan <-chan URLWasEncoded,
+) SaveEncodedURLJob {
 	retryPeriod := time.Duration(1+batchSize/40) * time.Millisecond
 	return func(ctx context.Context) <-chan error {
 
 		errChan := make(chan error, concurrency+1)
 
-		process := func(ctx context.Context, batch []encode.URLWasEncoded) error {
+		process := func(ctx context.Context, batch []URLWasEncoded) error {
 			err := store.SaveMany(ctx, batch)
 			if err != nil {
 				select {
@@ -40,17 +35,17 @@ func NewUrlWasEncodedHandler(
 		}
 
 		wg := sync.WaitGroup{}
-		for i := 0; i < concurrency; i++ {
+		for range concurrency {
 			wg.Add(1)
 
 			go func() {
 				defer wg.Done()
 				ticker := time.NewTicker(retryPeriod)
 
-				var batch []encode.URLWasEncoded
+				var batch []URLWasEncoded
 				for {
 					select {
-					case element, ok := <-TChan:
+					case element, ok := <-tChan:
 						if !ok {
 							if 0 < len(batch) {
 								err := process(ctx, batch)
@@ -93,7 +88,7 @@ func NewUrlWasEncodedHandler(
 								return
 							}
 						}
-						logger.WarnContext(ctx, "NewUrlWasEncodedHandler shut down gracefully")
+						logger.WarnContext(ctx, "NewSaveEncodedURLJob shut down gracefully")
 						return
 					}
 				}

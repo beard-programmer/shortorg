@@ -10,6 +10,6 @@ type LinkKeyStore interface {
 	Issue(ctx context.Context) (*core.LinkKey, error)
 }
 
-type URLParser interface {
-	core.URLParser
+type EncodedURLStore interface {
+	SaveMany(context.Context, []URLWasEncoded) error
 }

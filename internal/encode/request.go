@@ -16,7 +16,7 @@ type ValidatedRequest struct {
 	TokenHost   core.LinkHost
 }
 
-func NewValidatedRequest(urlParser URLParser, request EncodingRequest) (*ValidatedRequest, error) {
+func NewValidatedRequest(urlParser core.URLParser, request EncodingRequest) (*ValidatedRequest, error) {
 	originalUrl, err := core.DestinationURLFromString(urlParser, request.OriginalUrl())
 	if err != nil {
 		return nil, fmt.Errorf("parsing original url failed: %w", err)

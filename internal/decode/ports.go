@@ -13,20 +13,3 @@ type EncodedUrlsProvider interface {
 type EncodedUrlDto interface {
 	OriginalUrl() string
 }
-
-type UrlParser interface {
-	Parse(string) (URL, error)
-}
-
-type URL interface {
-	core.URL
-	Path() string
-}
-
-type UrlParserAdapter struct {
-	parser UrlParser
-}
-
-func (a UrlParserAdapter) Parse(s string) (core.URL, error) {
-	return a.parser.Parse(s)
-}

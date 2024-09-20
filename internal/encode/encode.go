@@ -16,7 +16,7 @@ type Fn = func(context.Context, EncodingRequest) (*URLWasEncoded, error)
 
 func NewEncodeFn(
 	tokenKeyStore LinkKeyStore,
-	urlParser URLParser,
+	urlParser core.URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- URLWasEncoded,
 ) Fn {
@@ -52,7 +52,7 @@ func (e ApplicationError) Error() string {
 func encode(
 	ctx context.Context,
 	linkKeyStore LinkKeyStore,
-	urlParser URLParser,
+	urlParser core.URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- URLWasEncoded,
 	request EncodingRequest,

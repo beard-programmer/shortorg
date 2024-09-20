@@ -8,7 +8,6 @@ import (
 	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
-	"github.com/beard-programmer/shortorg/internal/encode/infrastructure"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 type Server struct {
 	encodeFn             encode.Fn
 	decodeFn             decode.Fn
-	urlWasEncodedHandler infrastructure.URLWasEncodedHandlerFn
+	urlWasEncodedHandler encode.SaveEncodedURLJob
 	config               Config
 
 	serverName string
@@ -29,7 +28,7 @@ type Server struct {
 func New(
 	encodeFn encode.Fn,
 	decodeFn decode.Fn,
-	urlWasEncodedHandler infrastructure.URLWasEncodedHandlerFn,
+	urlWasEncodedHandler encode.SaveEncodedURLJob,
 	logger *appLogger.AppLogger,
 	config Config,
 	serverName string,

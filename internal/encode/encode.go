@@ -16,12 +16,11 @@ type Fn = func(context.Context, EncodingRequest) (*URLWasEncoded, error)
 
 func NewEncodeFn(
 	tokenKeyStore LinkKeyStore,
-	urlParser core.URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- URLWasEncoded,
 ) Fn {
 	return func(ctx context.Context, r EncodingRequest) (*URLWasEncoded, error) {
-		return encode(ctx, tokenKeyStore, urlParser, logger, urlWasEncodedChan, r)
+		return encode(ctx, tokenKeyStore, logger, urlWasEncodedChan, r)
 	}
 }
 
@@ -52,13 +51,11 @@ func (e ApplicationError) Error() string {
 func encode(
 	ctx context.Context,
 	linkKeyStore LinkKeyStore,
-	urlParser core.URLParser,
 	logger *appLogger.AppLogger,
 	urlWasEncodedChan chan<- URLWasEncoded,
 	request EncodingRequest,
 ) (*URLWasEncoded, error) {
 	validatedRequest, err := NewValidatedRequest(
-		urlParser,
 		request,
 	)
 

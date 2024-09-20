@@ -64,8 +64,8 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 	}
 
 	urlWasEncodedChan := make(chan encode.URLWasEncoded, cfg.EncodedUrlsQueSize)
-	encodeFn := encode.NewEncodeFn(tokenStore, infrastructure.UrlParser{}, logger, urlWasEncodedChan)
-	decodeFn := decode.NewDecodeFn(logger, infrastructure.UrlParser{}, encodedURLStore)
+	encodeFn := encode.NewEncodeFn(tokenStore, logger, urlWasEncodedChan)
+	decodeFn := decode.NewDecodeFn(logger, encodedURLStore)
 
 	urlWasEncodedHandler := encode.NewSaveEncodedURLJob(
 		logger,

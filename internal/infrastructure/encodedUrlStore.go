@@ -36,7 +36,11 @@ func NewEncodedURLStore(postgresClient *sqlx.DB, cache Cache[string], logger *lo
 	return &EncodedURLStore{postgresClient, cache, logger}, nil
 }
 
-func (s *EncodedURLStore) FindOneNonBrandedLink(ctx context.Context, key core.LinkKey, host core.LinkHost) (*core.NonBrandedLink, bool, error) {
+func (s *EncodedURLStore) FindOneNonBrandedLink(
+	ctx context.Context,
+	key core.LinkKey,
+	host core.LinkHost,
+) (*core.NonBrandedLink, bool, error) {
 	url, isFound, err := s.FindOne(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -45,7 +49,7 @@ func (s *EncodedURLStore) FindOneNonBrandedLink(ctx context.Context, key core.Li
 		return nil, false, nil
 	}
 
-	destinationURL, err := core.DestinationURLFromString(UrlParser{}, url)
+	destinationURL, err := core.DestinationURLFromString(url)
 
 	if err != nil {
 		return nil, false, err

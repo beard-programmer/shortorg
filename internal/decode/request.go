@@ -1,8 +1,6 @@
 package decode
 
 import (
-	"fmt"
-
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
@@ -14,8 +12,8 @@ type validatedRequest struct {
 	ShortURL shortUrl
 }
 
-func newValidatedRequest(urlParser core.URLParser, request decodingRequest) (*validatedRequest, error) {
-	shortURL, err := newShortUrl(urlParser, request.Url())
+func newValidatedRequest(request decodingRequest) (*validatedRequest, error) {
+	shortURL, err := newShortUrl(request.Url())
 	if err != nil {
 		return nil, err
 	}
@@ -29,16 +27,8 @@ type shortUrl struct {
 	linkHost core.LinkHost
 }
 
-func newShortUrl(urlParser core.URLParser, url string) (*shortUrl, error) {
-	uri, err := urlParser.Parse(url)
-	if err != nil {
-		return nil, err
-	}
-
-	scheme := uri.Scheme()
-	if scheme != "http" && scheme != "https" {
-		return nil, fmt.Errorf("invalid ShortUrl scheme: %s", scheme)
-	}
+func newShortUrl(url string) (*shortUrl, error) {
+	uri, err := core.NewURL(url)
 	hostname := uri.Hostname()
 	tokenHost, err := core.LinkHostFromString(&hostname)
 	if err != nil {

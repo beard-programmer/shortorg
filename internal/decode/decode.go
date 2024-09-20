@@ -21,20 +21,19 @@ var (
 
 type Fn = func(context.Context, decodingRequest) (*urlWasDecoded, bool, error)
 
-func NewDecodeFn(logger *appLogger.AppLogger, urlParser core.URLParser, encodedUrlsProvider EncodedUrlsProvider) Fn {
+func NewDecodeFn(logger *appLogger.AppLogger, encodedUrlsProvider EncodedUrlsProvider) Fn {
 	return func(ctx context.Context, r decodingRequest) (*urlWasDecoded, bool, error) {
-		return decode(ctx, logger, urlParser, encodedUrlsProvider, r)
+		return decode(ctx, logger, encodedUrlsProvider, r)
 	}
 }
 
 func decode(
 	ctx context.Context,
 	l *appLogger.AppLogger,
-	urlParser core.URLParser,
 	encodedUrlsProvider EncodedUrlsProvider,
 	request decodingRequest,
 ) (*urlWasDecoded, bool, error) {
-	validatedRequest, err := newValidatedRequest(urlParser, request)
+	validatedRequest, err := newValidatedRequest(request)
 	if err != nil {
 		return nil, false, err // validation
 	}
@@ -54,7 +53,7 @@ func decode(
 		return nil, isFound, nil
 	}
 
-	originalURL, err := core.DestinationURLFromString(urlParser, url)
+	originalURL, err := core.DestinationURLFromString(url)
 
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", errApplication, err)

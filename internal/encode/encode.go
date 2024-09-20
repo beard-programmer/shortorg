@@ -2,6 +2,7 @@ package encode
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
@@ -11,6 +12,12 @@ import (
 type URLWasEncoded struct {
 	NonBrandedLink core.NonBrandedLink
 }
+
+var (
+	errValidation     = errors.New("validation")
+	errInfrastructure = errors.New("infrastructure")
+	errApplication    = errors.New("application")
+)
 
 type Fn = func(context.Context, EncodingRequest) (*URLWasEncoded, error)
 
@@ -22,30 +29,6 @@ func NewEncodeFn(
 	return func(ctx context.Context, r EncodingRequest) (*URLWasEncoded, error) {
 		return encode(ctx, tokenKeyStore, logger, urlWasEncodedChan, r)
 	}
-}
-
-type ValidationError struct {
-	Err error
-}
-
-func (e ValidationError) Error() string {
-	return e.Err.Error()
-}
-
-type InfrastructureError struct {
-	Err error
-}
-
-func (e InfrastructureError) Error() string {
-	return e.Err.Error()
-}
-
-type ApplicationError struct {
-	Err error
-}
-
-func (e ApplicationError) Error() string {
-	return e.Err.Error()
 }
 
 func encode(
@@ -60,18 +43,18 @@ func encode(
 	)
 
 	if err != nil {
-		return nil, ValidationError{Err: err}
+		return nil, fmt.Errorf("%w: encode: %v", errValidation, err)
 	}
 
 	unclaimedKey, err := linkKeyStore.Issue(ctx)
 	if err != nil {
-		return nil, InfrastructureError{Err: fmt.Errorf("failed to generate unclaimedKey: %w", err)}
+		return nil, fmt.Errorf("%w: encode: failed to generate unclaimedKey: %v", errInfrastructure, err)
 	}
 
 	token, err := core.NewNonBrandedLink(*unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
-		return nil, ApplicationError{Err: fmt.Errorf("failed to make token: %w", err)}
+		return nil, fmt.Errorf("%w: encode: failed to build non branded link: %v", errApplication, err)
 	}
 
 	event := URLWasEncoded{*token}

@@ -49,7 +49,7 @@ func (s *EncodedURLStore) FindOneNonBrandedLink(
 		return nil, false, nil
 	}
 
-	destinationURL, err := core.DestinationURLFromString(url)
+	destinationURL, err := core.NewURL(url)
 
 	if err != nil {
 		return nil, false, err
@@ -108,7 +108,7 @@ func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.URL
 			valueArgs,
 			encodedURL.NonBrandedLink.Key.Value(),
 			encodedURL.NonBrandedLink.Slug.Value(),
-			encodedURL.NonBrandedLink.OriginalURL.String(),
+			encodedURL.NonBrandedLink.DestinationURL.String(),
 		)
 	}
 
@@ -124,8 +124,8 @@ func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.URL
 
 	for _, encodedURL := range encodedURLs {
 		key := encodedURL.NonBrandedLink.Key.Value()
-		url := encodedURL.NonBrandedLink.OriginalURL.String()
-		err = s.cache.Set(ctx, encodedURL.NonBrandedLink.Key.Value(), encodedURL.NonBrandedLink.OriginalURL.String())
+		url := encodedURL.NonBrandedLink.DestinationURL.String()
+		err = s.cache.Set(ctx, encodedURL.NonBrandedLink.Key.Value(), encodedURL.NonBrandedLink.DestinationURL.String())
 		if err != nil {
 			s.logger.WarnContext(ctx, fmt.Sprintf("SaveMany: Error storing in cache key %v value %v", key, url))
 		}

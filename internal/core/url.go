@@ -13,13 +13,13 @@ const (
 
 var errValidation = errors.New("validation")
 
-type Url struct {
+type URL struct {
 	scheme   string
 	hostname string
 	path     string
 }
 
-func NewURL(urlString string) (*Url, error) {
+func NewURL(urlString string) (*URL, error) {
 	if len(urlString) < minURLLen || maxURLLen <= len(urlString) {
 		return nil, fmt.Errorf(
 			"%w NewURL: urlString %s is out of range: its len must be included in %d .. %d",
@@ -39,17 +39,17 @@ func NewURL(urlString string) (*Url, error) {
 		return nil, fmt.Errorf("%w NewURL: scheme %s is not supported", errValidation, parsed.Scheme)
 	}
 
-	return &Url{scheme: parsed.Scheme, hostname: parsed.Hostname(), path: parsed.Path}, nil
+	return &URL{scheme: parsed.Scheme, hostname: parsed.Hostname(), path: parsed.Path}, nil
 }
 
-func (u *Url) String() string {
+func (u *URL) String() string {
 	return fmt.Sprintf("%s://%s%s", u.scheme, u.hostname, u.path)
 }
 
-func (u *Url) Hostname() string {
+func (u *URL) Hostname() string {
 	return u.hostname
 }
 
-func (u *Url) Path() string {
+func (u *URL) Path() string {
 	return u.path
 }

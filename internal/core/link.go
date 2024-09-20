@@ -5,10 +5,10 @@ import (
 )
 
 type NonBrandedLink struct {
-	Key         LinkKey
-	Slug        LinkSlug
-	Host        LinkHost
-	OriginalURL DestinationURL
+	Key            LinkKey
+	Slug           LinkSlug
+	Host           LinkHost
+	DestinationURL DestinationURL
 }
 
 func NewNonBrandedLink(linkKey LinkKey, linkHost LinkHost, destinationURL DestinationURL) (*NonBrandedLink, error) {

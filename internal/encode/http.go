@@ -40,7 +40,7 @@ func HttpHandlerFunc(
 	return func(w http.ResponseWriter, r *http.Request) {
 		apiRequest, err := httpEncoder.DecodeRequest[APIRequest](r)
 		if err != nil {
-			handleError(w, r, ValidationError{Err: fmt.Errorf("invalid request body")})
+			handleError(w, r, fmt.Errorf("%w encode: invalid request body", errValidation))
 			return
 		}
 
@@ -52,7 +52,7 @@ func HttpHandlerFunc(
 		}
 
 		response := APIResponse{
-			URL: urlWasEncoded.NonBrandedLink.OriginalURL.String(),
+			URL: urlWasEncoded.NonBrandedLink.DestinationURL.String(),
 			ShortURL: fmt.Sprintf(
 				"https://%s/%s",
 				urlWasEncoded.NonBrandedLink.Host.Hostname(),
@@ -66,20 +66,20 @@ func HttpHandlerFunc(
 func handleError(w http.ResponseWriter, r *http.Request, err error) {
 	var apiErr APIErrResponse
 
-	var validationErr ValidationError
-	var applicationErr ApplicationError
-	var infrastructureErr InfrastructureError
-
 	switch {
-	case errors.As(err, &validationErr):
-		apiErr = APIErrResponse{Code: "ValidationError", Message: err.Error(), httpStatusCode: http.StatusBadRequest}
-	case errors.As(err, &applicationErr):
+	case errors.Is(err, errValidation):
+		apiErr = APIErrResponse{
+			Code:           "ValidationError",
+			Message:        err.Error(),
+			httpStatusCode: http.StatusBadRequest,
+		}
+	case errors.Is(err, errApplication):
 		apiErr = APIErrResponse{
 			Code:           "ApplicationError",
 			Message:        err.Error(),
 			httpStatusCode: http.StatusUnprocessableEntity,
 		}
-	case errors.As(err, &infrastructureErr):
+	case errors.Is(err, errInfrastructure):
 		apiErr = APIErrResponse{
 			Code:           "InfrastructureError",
 			Message:        err.Error(),

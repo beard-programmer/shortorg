@@ -53,7 +53,7 @@ func decode(
 		return nil, isFound, nil
 	}
 
-	originalURL, err := core.DestinationURLFromString(url)
+	originalURL, err := core.NewURL(url)
 
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: failed to parse original url from storage %v", errApplication, err)

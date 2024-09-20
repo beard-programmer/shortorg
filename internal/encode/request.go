@@ -17,7 +17,7 @@ type ValidatedRequest struct {
 }
 
 func NewValidatedRequest(request EncodingRequest) (*ValidatedRequest, error) {
-	originalUrl, err := core.DestinationURLFromString(request.OriginalUrl())
+	originalUrl, err := core.NewURL(request.OriginalUrl())
 	if err != nil {
 		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}

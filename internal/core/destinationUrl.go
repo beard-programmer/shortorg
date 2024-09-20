@@ -1,6 +1,6 @@
 package core
 
-type DestinationURL = Url
+type DestinationURL = URL
 
 func DestinationURLFromString(s string) (*DestinationURL, error) {
 	url, err := NewURL(s)

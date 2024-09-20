@@ -54,7 +54,7 @@ func HTTPHandlerFunc(
 		}
 
 		response := responseHTTP{
-			OriginalURL: urlWasDecoded.Token.OriginalURL.String(),
+			OriginalURL: urlWasDecoded.Token.DestinationURL.String(),
 			ShortURL: fmt.Sprintf(
 				"https://%s/%s",
 				urlWasDecoded.Token.Host.Hostname(),

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -14,23 +13,34 @@ type LinkSlug struct {
 
 var pattern = regexp.MustCompile(`^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$`)
 
+const minSlugSize = 6
+
 func NewLinkSlug(s string) (*LinkSlug, error) {
-	if len(s) != 6 {
-		return nil, fmt.Errorf("value length must 6 characters, got %d", len(s))
+	if len(s) != minSlugSize {
+		return nil, fmt.Errorf("%w NewLinkSlug: value length must 6 characters, got %d", errValidation, len(s))
 	}
 
 	if !pattern.MatchString(s) {
-		return nil, errors.New("value contains invalid characters: must only contain Base58 characters")
+		return nil,
+			fmt.Errorf(
+				"%w NewLinkSlug: %s value contains invalid characters: must only contain Base58 characters",
+				errValidation,
+				s,
+			)
 	}
 
 	return &LinkSlug{value: s}, nil
 }
 
-func NewLinkSlugFromLinkKey(k LinkKey) (*LinkSlug, error) {
-	value := string(base58.BitcoinEncoding.EncodeUint64(uint64(k.Value())))
-	return NewLinkSlug(value)
-}
-
 func (s LinkSlug) Value() string {
 	return s.value
+}
+
+// TODO: deprecated
+func (s LinkSlug) IntoLinkKey() (*LinkKey, error) {
+	value, err := base58.BitcoinEncoding.DecodeUint64([]byte(s.value))
+	if err != nil {
+		return nil, err
+	}
+	return NewLinkKey(value)
 }

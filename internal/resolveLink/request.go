@@ -1,10 +1,10 @@
-package decode
+package resolveLink
 
 import (
 	"github.com/beard-programmer/shortorg/internal/core"
 )
 
-type decodingRequest interface {
+type resolveLinkRequest interface {
 	Url() string
 }
 
@@ -12,7 +12,7 @@ type validatedRequest struct {
 	ShortURL shortUrl
 }
 
-func newValidatedRequest(request decodingRequest) (*validatedRequest, error) {
+func newValidatedRequest(request resolveLinkRequest) (*validatedRequest, error) {
 	shortURL, err := newShortUrl(request.Url())
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ type shortUrl struct {
 func newShortUrl(url string) (*shortUrl, error) {
 	uri, err := core.NewURL(url)
 	hostname := uri.Hostname()
-	tokenHost, err := core.LinkHostFromString(&hostname)
+	tokenHost, err := core.NewLinkHost(&hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +40,6 @@ func newShortUrl(url string) (*shortUrl, error) {
 		return nil, err
 	}
 
-	return &shortUrl{linkSlug: *encodedKey, linkHost: tokenHost}, nil
+	return &shortUrl{linkSlug: *encodedKey, linkHost: *tokenHost}, nil
 
 }

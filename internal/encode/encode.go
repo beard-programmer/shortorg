@@ -10,7 +10,7 @@ import (
 )
 
 type URLWasEncoded struct {
-	NonBrandedLink core.NonBrandedLink
+	NonBrandedLink core.Link
 }
 
 var (
@@ -51,7 +51,7 @@ func encode(
 		return nil, fmt.Errorf("%w: encode: failed to generate unclaimedKey: %v", errInfrastructure, err)
 	}
 
-	token, err := core.NewNonBrandedLink(*unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
+	token, err := core.NewLink(*unclaimedKey, validatedRequest.TokenHost, validatedRequest.OriginalURL)
 
 	if err != nil {
 		return nil, fmt.Errorf("%w: encode: failed to build non branded link: %v", errApplication, err)

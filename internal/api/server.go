@@ -6,8 +6,8 @@ import (
 	"time"
 
 	appLogger "github.com/beard-programmer/shortorg/internal/app/logger"
-	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/beard-programmer/shortorg/internal/resolveLink"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 
 type Server struct {
 	encodeFn             encode.Fn
-	decodeFn             decode.Fn
+	decodeFn             resolveLink.ResolveLinkFn
 	urlWasEncodedHandler encode.SaveEncodedURLJob
 	config               Config
 
@@ -27,7 +27,7 @@ type Server struct {
 
 func New(
 	encodeFn encode.Fn,
-	decodeFn decode.Fn,
+	decodeFn resolveLink.ResolveLinkFn,
 	urlWasEncodedHandler encode.SaveEncodedURLJob,
 	logger *appLogger.AppLogger,
 	config Config,

@@ -1,4 +1,4 @@
--- Read all short URLs for /decode requests
+-- Read all short URLs for /resolveLink requests
 local short_urls = {}
 
 local function loadShortUrlsFromFile(filename)
@@ -44,15 +44,15 @@ local function logShortUrl(short_url)
     file:flush() -- Ensure data is written to the file immediately
 end
 
--- HTTP request function with 20% for /encode and 80% for /decode
+-- HTTP request function with 20% for /encode and 80% for /resolveLink
 local current_index = 1
 
 request = function()
     local random_number = math.random()
 
-    -- 80% probability for /decode, 20% for /encode
+    -- 80% probability for /resolveLink, 20% for /encode
     if random_number <= 0.8 then
-        -- Handle /decode requests
+        -- Handle /resolveLink requests
         if current_index > #short_urls then
             current_index = 1 -- Reset the index if we reach the end of the list
         end
@@ -60,9 +60,9 @@ request = function()
         local short_url = short_urls[current_index]
         current_index = current_index + 1
 
-        -- Create the /decode HTTP request
+        -- Create the /resolveLink HTTP request
         local body = '{"short_url": "' .. short_url .. '"}'
-        return wrk.format("POST", "/decode", {["Content-Type"] = "application/json"}, body)
+        return wrk.format("POST", "/resolveLink", {["Content-Type"] = "application/json"}, body)
 
     else
         -- Handle /encode requests (20%)

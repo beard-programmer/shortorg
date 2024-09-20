@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
+	"github.com/beard-programmer/shortorg/internal/resolveLink"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog/v2"
@@ -75,7 +75,7 @@ func (s *Server) getServerMux(_ context.Context) *chi.Mux {
 		"/api", func(r chi.Router) {
 			r.Use(middleware.AllowContentType("application/json"))
 			r.HandleFunc("POST /encode", encode.HttpHandlerFunc(s.logger, s.encodeFn))
-			r.HandleFunc("POST /decode", decode.HTTPHandlerFunc(s.logger, s.decodeFn))
+			r.HandleFunc("POST /resolve-link", resolveLink.HTTPHandlerFunc(s.logger, s.decodeFn))
 		},
 	)
 
@@ -93,7 +93,7 @@ func (s *Server) wrapWithDefaultMiddlewares(mux *chi.Mux) *chi.Mux {
 				"env": s.env,
 			},
 			QuietDownRoutes: []string{
-				"/api/decode",
+				"/api/resolve-link",
 				"/api/encode",
 			},
 			QuietDownPeriod: 1 * time.Second,

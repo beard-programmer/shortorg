@@ -1,4 +1,4 @@
-package decode
+package resolveLink
 
 import (
 	"errors"
@@ -30,7 +30,7 @@ type responseErrHTTP struct {
 
 func HTTPHandlerFunc(
 	logger *appLogger.AppLogger,
-	decodeFunc Fn,
+	resolveLinkFn ResolveLinkFn,
 ) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		apiRequest, err := httpEncoder.DecodeRequest[requestHTTP](request)
@@ -40,7 +40,7 @@ func HTTPHandlerFunc(
 			return
 		}
 
-		urlWasDecoded, found, err := decodeFunc(request.Context(), apiRequest)
+		urlWasDecoded, found, err := resolveLinkFn(request.Context(), apiRequest)
 
 		if err != nil {
 			handleError(writer, request, err)
@@ -54,11 +54,11 @@ func HTTPHandlerFunc(
 		}
 
 		response := responseHTTP{
-			OriginalURL: urlWasDecoded.Token.DestinationURL.String(),
+			OriginalURL: urlWasDecoded.NonBrandedLink.DestinationURL.String(),
 			ShortURL: fmt.Sprintf(
 				"https://%s/%s",
-				urlWasDecoded.Token.Host.Hostname(),
-				urlWasDecoded.Token.Slug.Value(),
+				urlWasDecoded.NonBrandedLink.Host.Hostname(),
+				urlWasDecoded.NonBrandedLink.Slug.Value(),
 			),
 		}
 		httpEncoder.EncodeResponse(writer, request, http.StatusOK, response)

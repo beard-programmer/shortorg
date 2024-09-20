@@ -26,7 +26,7 @@ local function logShortUrl(short_url)
     file:flush() -- Ensure data is written to the file immediately
 end
 
--- HTTP request function with 20% for /encode and 80% for /decode
+-- HTTP request function with 20% for /encode and 80% for /resolveLink
 local current_index = 1
 
 request = function()

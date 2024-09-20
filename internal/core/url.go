@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -10,8 +9,6 @@ const (
 	minURLLen = 10
 	maxURLLen = 2048
 )
-
-var errValidation = errors.New("validation")
 
 type URL struct {
 	scheme   string
@@ -48,6 +45,10 @@ func (u *URL) String() string {
 
 func (u *URL) Hostname() string {
 	return u.hostname
+}
+
+func (u *URL) Scheme() string {
+	return u.scheme
 }
 
 func (u *URL) Path() string {

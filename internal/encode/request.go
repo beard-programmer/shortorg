@@ -17,22 +17,18 @@ type ValidatedRequest struct {
 }
 
 func NewValidatedRequest(request EncodingRequest) (*ValidatedRequest, error) {
-	originalUrl, err := core.NewURL(request.OriginalUrl())
+	destinationURL, err := core.NewURL(request.OriginalUrl())
 	if err != nil {
 		return nil, fmt.Errorf("parsing original url failed: %w", err)
 	}
 
-	tokenHost, err := core.LinkHostFromString(request.Host())
+	linkHost, err := core.NewLinkHost(request.Host())
 	if err != nil {
 		return nil, err
 	}
 
-	if originalUrl.Hostname() == tokenHost.Hostname() {
-		return nil, fmt.Errorf("request validation failed: cannot encode self")
-	}
-
 	return &ValidatedRequest{
-		OriginalURL: *originalUrl,
-		TokenHost:   tokenHost,
+		OriginalURL: *destinationURL,
+		TokenHost:   *linkHost,
 	}, nil
 }

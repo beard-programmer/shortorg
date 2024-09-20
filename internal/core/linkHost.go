@@ -2,22 +2,25 @@ package core
 
 import "fmt"
 
-type LinkHost interface {
-	Hostname() string
+type LinkHost struct {
+	hostname  string
+	isBranded bool
 }
 
-func LinkHostFromString(host *string) (LinkHost, error) {
-	if host == nil || *host == "" || *host == standardTokenHost {
-		return &linkHostStandard{}, nil
+func (h LinkHost) IsBranded() bool {
+	return h.isBranded
+}
+
+func (h LinkHost) Hostname() string {
+	return h.hostname
+}
+
+func NewLinkHost(host *string) (*LinkHost, error) {
+	if host == nil || *host == "" || *host == DefaultLinkHost {
+		return &LinkHost{hostname: DefaultLinkHost, isBranded: false}, nil
 	}
 
-	return nil, fmt.Errorf("token host %v is not supported", *host)
+	return nil, fmt.Errorf("link host %v is not supported", *host)
 }
 
-const standardTokenHost = "shortl.org"
-
-type linkHostStandard struct{}
-
-func (t *linkHostStandard) Hostname() string {
-	return standardTokenHost
-}
+const DefaultLinkHost = "shortl.org"

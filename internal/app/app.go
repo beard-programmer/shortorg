@@ -8,9 +8,9 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/api"
 	"github.com/beard-programmer/shortorg/internal/app/logger"
-	"github.com/beard-programmer/shortorg/internal/decode"
 	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/beard-programmer/shortorg/internal/infrastructure"
+	"github.com/beard-programmer/shortorg/internal/resolveLink"
 )
 
 type App struct {
@@ -18,7 +18,7 @@ type App struct {
 	cfg                  config
 	encodeFn             encode.Fn
 	urlWasEncodedHandler encode.SaveEncodedURLJob
-	decodeFn             decode.Fn
+	decodeFn             resolveLink.ResolveLinkFn
 }
 
 func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
@@ -65,7 +65,7 @@ func New(ctx context.Context, logger *logger.AppLogger) (*App, error) {
 
 	urlWasEncodedChan := make(chan encode.URLWasEncoded, cfg.EncodedUrlsQueSize)
 	encodeFn := encode.NewEncodeFn(tokenStore, logger, urlWasEncodedChan)
-	decodeFn := decode.NewDecodeFn(logger, encodedURLStore)
+	decodeFn := resolveLink.NewResolveLinkFn(logger, encodedURLStore)
 
 	urlWasEncodedHandler := encode.NewSaveEncodedURLJob(
 		logger,

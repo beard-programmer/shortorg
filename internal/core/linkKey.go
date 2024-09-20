@@ -12,30 +12,29 @@ const (
 )
 
 type LinkKey struct {
-	value int64
+	value uint64
 }
 
-func NewLinkKey(value int64) (*LinkKey, error) {
+func NewLinkKey[T int64 | uint64](value T) (*LinkKey, error) {
 	if value < minBase58Exp5 || maxBase58Exp6 <= value {
 		return nil, fmt.Errorf(
-			"value %d is out of range: must be included in %d .. %d", value,
-			minBase58Exp5, maxBase58Exp6-1,
+			"%w NewLinkKey: value %d is out of range: must be included in %d .. %d",
+			errValidation,
+			value,
+			minBase58Exp5,
+			maxBase58Exp6-1,
 		)
 	}
 
-	//		return nil, false, fmt.Errorf("%w: failed to build token %v", errApplication, err)
-
-	return &LinkKey{value: value}, nil
+	return &LinkKey{value: uint64(value)}, nil
 }
 
-func NewLinkKeyFromLinkSlug(slug LinkSlug) (*LinkKey, error) {
-	value, err := base58.BitcoinEncoding.DecodeUint64([]byte(slug.Value()))
-	if err != nil {
-		return nil, err
-	}
-	return NewLinkKey(int64(value))
+// TODO: deprecated
+func (k LinkKey) IntoLinkSlug() (*LinkSlug, error) {
+	encoded := string(base58.BitcoinEncoding.EncodeUint64(k.value))
+	return NewLinkSlug(encoded)
 }
 
 func (k LinkKey) Value() int64 {
-	return k.value
+	return int64(k.value) //nolint:gosec // its validated
 }

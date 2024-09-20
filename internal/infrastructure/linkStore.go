@@ -9,13 +9,12 @@ import (
 
 	"github.com/beard-programmer/shortorg/internal/app/logger"
 	"github.com/beard-programmer/shortorg/internal/core"
-	"github.com/beard-programmer/shortorg/internal/encode"
 	"github.com/jmoiron/sqlx"
 )
 
 var errEncodedURLStore = errors.New("errEncodedURLStore")
 
-type EncodedURLStore struct {
+type LinkStore struct {
 	postgresClient *sqlx.DB
 	cache          Cache[string]
 	logger         *logger.AppLogger
@@ -27,43 +26,49 @@ type Cache[T any] interface {
 }
 
 func NewEncodedURLStore(postgresClient *sqlx.DB, cache Cache[string], logger *logger.AppLogger) (
-	*EncodedURLStore,
+	*LinkStore,
 	error,
 ) {
 	if postgresClient == nil {
 		return nil, fmt.Errorf("%w: NewEncodedURLStore: postgresClient is nil", errEncodedURLStore)
 	}
-	return &EncodedURLStore{postgresClient, cache, logger}, nil
+	return &LinkStore{postgresClient, cache, logger}, nil
 }
 
-func (s *EncodedURLStore) FindOneNonBrandedLink(
+func (s *LinkStore) FindOneNonBrandedLink(
 	ctx context.Context,
-	key core.LinkKey,
-	host core.LinkHost,
-) (*core.NonBrandedLink, bool, error) {
-	url, isFound, err := s.FindOne(ctx, key)
-	if err != nil {
-		return nil, false, err
-	}
-	if !isFound {
+	slugDto core.LinkSlugDto,
+	keyDto core.LinkKeyDto,
+	hostDto core.LinkHostDto,
+) (
+	*core.LinkDTO,
+	bool,
+	error,
+) {
+	var (
+		key  int64
+		url  string
+		slug string
+	)
+
+	row := s.postgresClient.QueryRowxContext(
+		ctx,
+		"SELECT url, token, token_identifier FROM encoded_urls WHERE token_identifier=$1 LIMIT 1",
+		keyDto.Value,
+	)
+
+	err := row.Scan(&url, &slug, &key)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
-
-	destinationURL, err := core.NewURL(url)
-
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("%w: FindOne: failed to execute%s", errLinkKeyStore, err)
 	}
 
-	link, err := core.NewNonBrandedLink(key, host, *destinationURL)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return link, true, nil
+	return &core.LinkDTO{Key: keyDto, Slug: slugDto, Host: hostDto, DestinationURL: core.URLDto{Value: url}}, true, nil
 }
 
-func (s *EncodedURLStore) FindOne(ctx context.Context, key core.LinkKey) (string, bool, error) {
+func (s *LinkStore) FindOne(ctx context.Context, key core.LinkKey) (string, bool, error) {
 	var (
 		url string
 		err error
@@ -95,20 +100,20 @@ func (s *EncodedURLStore) FindOne(ctx context.Context, key core.LinkKey) (string
 	return url, true, nil
 }
 
-func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.URLWasEncoded) error {
+func (s *LinkStore) SaveMany(ctx context.Context, links []core.LinkDTO) error {
 	// NamedExecContext is generating invalid sql so building query manually.
-	valueStrings := make([]string, 0, len(encodedURLs))
-	valueArgs := make([]interface{}, 0, len(encodedURLs)*3) //nolint:mnd // _
+	valueStrings := make([]string, 0, len(links))
+	valueArgs := make([]interface{}, 0, len(links)*3) //nolint:mnd // _
 
-	for i, encodedURL := range encodedURLs {
+	for i, linkDto := range links {
 		valueStrings = append(
 			valueStrings, fmt.Sprintf("($%d, $%d, $%d)", i*3+1, i*3+2, i*3+3), //nolint:mnd // _
 		)
 		valueArgs = append(
 			valueArgs,
-			encodedURL.NonBrandedLink.Key.Value(),
-			encodedURL.NonBrandedLink.Slug.Value(),
-			encodedURL.NonBrandedLink.DestinationURL.String(),
+			linkDto.Key.Value,
+			linkDto.Slug.Value,
+			linkDto.DestinationURL.Value,
 		)
 	}
 
@@ -122,14 +127,14 @@ func (s *EncodedURLStore) SaveMany(ctx context.Context, encodedURLs []encode.URL
 		return fmt.Errorf("%w: SaveMany: failed to execute bulk insert: %s", errLinkKeyStore, err)
 	}
 
-	for _, encodedURL := range encodedURLs {
-		key := encodedURL.NonBrandedLink.Key.Value()
-		url := encodedURL.NonBrandedLink.DestinationURL.String()
-		err = s.cache.Set(ctx, encodedURL.NonBrandedLink.Key.Value(), encodedURL.NonBrandedLink.DestinationURL.String())
-		if err != nil {
-			s.logger.WarnContext(ctx, fmt.Sprintf("SaveMany: Error storing in cache key %v value %v", key, url))
-		}
-	}
+	//for _, encodedURL := range links {
+	//	key := encodedURL.NonBrandedLink.Key.Value()
+	//	url := encodedURL.NonBrandedLink.DestinationURL.String()
+	//	err = s.cache.Set(ctx, encodedURL.NonBrandedLink.Key.Value(), encodedURL.NonBrandedLink.DestinationURL.String())
+	//	if err != nil {
+	//		s.logger.WarnContext(ctx, fmt.Sprintf("SaveMany: Error storing in cache key %v value %v", key, url))
+	//	}
+	//}
 
 	return nil
 }

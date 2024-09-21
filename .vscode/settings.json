@@ -1,0 +1,59 @@
+{
+  "cSpell.words": [
+    "shortl",
+    "shortorg",
+    "Unvalidated",
+    "URLIOs"
+  ],
+  "go.alternateTools": {},
+  // Go settings
+  "go.useLanguageServer": true, // Use goimports to format code and organize imports on save
+  "go.lintTool": "golangci-lint", // Use golangci-lint as the linter
+  "go.lintFlags": [
+    "--fast", // Run golangci-lint in fast mode for quicker results
+  ],
+  "gopls": {
+    "ui.semanticTokens": true, // Enables semantic highlighting for better code visualization
+    "formatting.gofumpt": true, // Enables gofumpt formatting, which is a stricter gofmt
+    "staticcheck": true, // Enables additional static analysis checks
+    "ui.completion.usePlaceholders": true, // Use placeholders in auto-completion
+    "analyses": {
+      "unusedparams": true, // Warn for unused function parameters
+      "nilness": true, // Detect possible nil dereferences
+      "shadow": true // Warn for shadowed variables
+    }
+  },
+  // Enable inlay hints for Go
+  "go.inlayHints.constantValues": true, // Show inlay hints for constant values
+  "go.inlayHints.variableTypes": true, // Show inlay hints for variable types
+  "go.inlayHints.functionTypeParameters": true, // Show inlay hints for function type parameters
+  // Editor settings for formatting and organizing imports on save
+  "editor.formatOnSave": true, // Formats code on save for all files
+  "[go]": {
+    "editor.formatOnSave": true, // Format Go files on save
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "[go.mod]": {
+    "editor.formatOnSave": true, // Format go.mod files on save
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  // Control the editor's hover and snippet behavior
+  "editor.hover.enabled": true, // Enable hover tooltips
+  "editor.snippetSuggestions": "top", // Show snippet suggestions at the top
+  "editor.suggestSelection": "first", // Lint the entire package on save to avoid false negatives
+  "go.languageServerExperimentalFeatures": {
+    "diagnostics": true // Enable diagnostic feedback from the language server
+  },
+  // Automatically save files on window change
+  "files.autoSave": "onWindowChange",
+  // Place the sidebar on the right for a different layout preference
+  "workbench.sideBar.location": "right",
+  "go.diagnostic.vulncheck": "Imports",
+  "go.inlayHints.assignVariableTypes": true,
+  "go.inlayHints.compositeLiteralTypes": true,
+  "go.inlayHints.rangeVariableTypes": true,
+}

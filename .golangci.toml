@@ -64,7 +64,7 @@ ignored-functions = [
     "os.OpenFile",
     "os.WriteFile",
     "prometheus.ExponentialBuckets.*",
-    "prometheus.LinearBuckets"
+    "prometheus.LinearBuckets",
 ]
 
 [linters-settings.nakedret]
@@ -182,7 +182,7 @@ enable = [
     "interfacebloat",
     "ireturn",
     "prealloc",
-    "wrapcheck"
+    "wrapcheck",
 ]
 
 [issues]
@@ -205,5 +205,5 @@ linters = [
     "goconst",
     "gosec",
     "noctx",
-    "wrapcheck"
+    "wrapcheck",
 ]
